@@ -27,9 +27,9 @@ export function Container({
 
   const paddingClasses = {
     sm: 'px-4',
-    md: 'px-4 md:px-6',
-    lg: 'px-6 md:px-8',
-    xl: 'px-8 md:px-12',
+    md: 'px-4 md:px-6 lg:px-8',
+    lg: 'px-6 md:px-8 lg:px-12',
+    xl: 'px-8 md:px-12 lg:px-16',
     full: 'px-0',
   };
 

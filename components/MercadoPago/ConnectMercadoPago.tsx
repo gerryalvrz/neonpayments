@@ -59,7 +59,7 @@ export function ConnectMercadoPago() {
   };
 
   const handleContinue = () => {
-    router.push('/');
+    router.push('/services');
   };
 
   return (
@@ -72,8 +72,8 @@ export function ConnectMercadoPago() {
             <Icon size="xl" color="neon" className="mb-4">
               <CreditCardIcon />
             </Icon>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{t.title}</h1>
-            <p className="text-gray-600">{t.subtitle}</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.title}</h1>
+            <p className="text-gray-600 dark:text-gray-300">{t.subtitle}</p>
           </div>
 
           {step === 'connect' && (
@@ -90,7 +90,7 @@ export function ConnectMercadoPago() {
           {step === 'processing' && (
             <div className="space-y-4">
               <Progress value={progress} />
-              <p className="text-center text-gray-600">{t.processing}</p>
+              <p className="text-center text-gray-600 dark:text-gray-300">{t.processing}</p>
             </div>
           )}
 
@@ -100,8 +100,8 @@ export function ConnectMercadoPago() {
                 <Icon size="xl" color="success" className="mb-2">
                   <CheckCircleIcon />
                 </Icon>
-                <p className="text-lg font-semibold text-gray-900">{t.success}</p>
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">{t.success}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
                   {t.balance}: $5,000.00 MXN
                 </p>
               </div>

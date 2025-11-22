@@ -32,30 +32,31 @@ export function Input({
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-gray-700 mb-1.5"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
         >
           {label}
         </label>
       )}
       <div className="relative">
         {leadingIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
             {leadingIcon}
           </div>
         )}
         <input
           id={inputId}
           className={cn(
-            'w-full rounded-lg border-2 bg-glass-white backdrop-blur-[20px]',
-            'px-4 py-2.5 text-gray-900 placeholder:text-gray-400',
-            'focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all',
-            leadingIcon && 'pl-10',
-            trailingIcon && 'pr-10',
+            'w-full rounded-xl border bg-glass-white dark:bg-gray-800/85 backdrop-blur-[20px]',
+            'px-4 py-3 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500',
+            'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 transition-all duration-200',
+            'hover:border-acid-lemon/40 dark:hover:border-acid-lemon/50',
+            leadingIcon && 'pl-11',
+            trailingIcon && 'pr-11',
             hasError
-              ? 'border-semantic-error focus:ring-red-500'
+              ? 'border-semantic-error focus:ring-red-500 focus:border-red-500'
               : hasSuccess
-              ? 'border-semantic-success focus:ring-green-500'
-              : 'border-acid-lemon focus:ring-acid-lemon',
+              ? 'border-semantic-success focus:ring-green-500 focus:border-green-500'
+              : 'border-gray-300 dark:border-gray-600 focus:ring-acid-lemon focus:border-acid-lemon',
             className
           )}
           aria-invalid={hasError}
@@ -65,7 +66,7 @@ export function Input({
           {...props}
         />
         {trailingIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
             {trailingIcon}
           </div>
         )}
@@ -76,7 +77,7 @@ export function Input({
         </p>
       )}
       {helperText && !error && (
-        <p id={`${inputId}-helper`} className="mt-1.5 text-sm text-gray-500">
+        <p id={`${inputId}-helper`} className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
           {helperText}
         </p>
       )}

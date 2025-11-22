@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useLayoutEffect, useRef, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
 import { GoArrowUpRight } from 'react-icons/go';
+import { ThemeToggle } from '@/components/UI/ThemeToggle';
 
 type CardNavLink = {
   label: string;
@@ -40,6 +42,8 @@ const CardNav: React.FC<CardNavProps> = ({
   buttonBgColor,
   buttonTextColor
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const navRef = useRef<HTMLDivElement | null>(null);
@@ -162,6 +166,57 @@ const CardNav: React.FC<CardNavProps> = ({
     if (el) cardsRef.current[i] = el;
   };
 
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href?: string) => {
+    e.preventDefault();
+    if (href && href !== '#') {
+      // Close menu when navigating
+      if (isExpanded) {
+        setIsHamburgerOpen(false);
+        const tl = tlRef.current;
+        if (tl) {
+          // Navigate immediately, animation will close menu
+          router.push(href);
+          tl.eventCallback('onReverseComplete', () => {
+            setIsExpanded(false);
+          });
+          tl.reverse();
+        } else {
+          router.push(href);
+        }
+      } else {
+        router.push(href);
+      }
+    }
+  };
+
+  const handleLogoClick = () => {
+    if (pathname !== '/') {
+      router.push('/');
+    }
+    // Close menu if open
+    if (isExpanded) {
+      setIsHamburgerOpen(false);
+      const tl = tlRef.current;
+      if (tl) {
+        tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
+        tl.reverse();
+      }
+    }
+  };
+
+  const handleGetStarted = () => {
+    router.push('/auth');
+    // Close menu if open
+    if (isExpanded) {
+      setIsHamburgerOpen(false);
+      const tl = tlRef.current;
+      if (tl) {
+        tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
+        tl.reverse();
+      }
+    }
+  };
+
   return (
     <div
       className={`card-nav-container absolute left-1/2 -translate-x-1/2 w-[90%] max-w-[800px] z-[99] top-[1.2em] md:top-[2em] ${className}`}
@@ -173,12 +228,11 @@ const CardNav: React.FC<CardNavProps> = ({
       >
         <div className="card-nav-top absolute inset-x-0 top-0 h-[60px] flex items-center justify-between p-2 pl-[1.1rem] z-[2]">
           <div
-            className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''} group h-full flex flex-col items-center justify-center cursor-pointer gap-[6px] order-2 md:order-none`}
+            className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''} group h-full flex flex-col items-center justify-center cursor-pointer gap-[6px] order-2 md:order-none text-gray-900 dark:text-white`}
             onClick={toggleMenu}
             role="button"
             aria-label={isExpanded ? 'Close menu' : 'Open menu'}
             tabIndex={0}
-            style={{ color: finalMenuColor }}
           >
             <div
               className={`hamburger-line w-[30px] h-[2px] bg-current transition-[transform,opacity,margin] duration-300 ease-linear [transform-origin:50%_50%] ${
@@ -192,25 +246,44 @@ const CardNav: React.FC<CardNavProps> = ({
             />
           </div>
 
-          <div className="logo-container flex items-center md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 order-1 md:order-none">
+          <div 
+            className="logo-container flex items-center md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 order-1 md:order-none cursor-pointer hover:opacity-75 transition-opacity"
+            onClick={handleLogoClick}
+            role="button"
+            aria-label="Go to home"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleLogoClick();
+              }
+            }}
+          >
             {typeof logo === 'string' ? (
               logo.startsWith('http') || logo.startsWith('/') || logo.endsWith('.svg') || logo.endsWith('.png') || logo.endsWith('.jpg') || logo.endsWith('.jpeg') ? (
                 <img src={logo} alt={logoAlt} className="logo h-[28px]" />
               ) : (
-                <span className="text-xl font-bold" style={{ color: finalMenuColor }}>{logo}</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-white">{logo}</span>
               )
             ) : (
               <div className="logo h-[28px] flex items-center">{logo}</div>
             )}
           </div>
 
-          <button
-            type="button"
-            className="card-nav-cta-button hidden md:inline-flex border-0 rounded-[calc(0.75rem-0.2rem)] px-4 items-center h-full font-medium cursor-pointer transition-colors duration-300"
-            style={{ backgroundColor: finalButtonBgColor, color: finalButtonTextColor }}
-          >
-            Get Started
-          </button>
+          <div className="hidden md:flex items-center gap-2">
+            <ThemeToggle size="sm" />
+            <button
+              type="button"
+              className="card-nav-cta-button inline-flex border-0 rounded-[calc(0.75rem-0.2rem)] px-4 items-center h-full font-medium cursor-pointer transition-colors duration-300 hover:opacity-90"
+              style={{ backgroundColor: finalButtonBgColor, color: finalButtonTextColor }}
+              onClick={handleGetStarted}
+            >
+              Get Started
+            </button>
+          </div>
+          <div className="md:hidden">
+            <ThemeToggle size="sm" />
+          </div>
         </div>
 
         <div
@@ -233,9 +306,13 @@ const CardNav: React.FC<CardNavProps> = ({
                 {item.links?.map((lnk, i) => (
                   <a
                     key={`${lnk.label}-${i}`}
-                    className="nav-card-link inline-flex items-center gap-[6px] no-underline cursor-pointer transition-opacity duration-300 hover:opacity-75 text-[15px] md:text-[16px]"
+                    className={`nav-card-link inline-flex items-center gap-[6px] no-underline cursor-pointer transition-opacity duration-300 hover:opacity-90 text-[15px] md:text-[16px] ${
+                      pathname === lnk.href ? 'opacity-100 font-semibold' : 'opacity-90'
+                    }`}
                     href={lnk.href || '#'}
                     aria-label={lnk.ariaLabel}
+                    onClick={(e) => handleLinkClick(e, lnk.href)}
+                    style={{ color: 'inherit' }}
                   >
                     <GoArrowUpRight className="nav-card-link-icon shrink-0" aria-hidden="true" />
                     {lnk.label}

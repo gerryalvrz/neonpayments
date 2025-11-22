@@ -6,6 +6,7 @@ import { Card } from '@/components/UI/Card';
 import { Badge } from '@/components/UI/Badge';
 import { Icon, CopyIcon, CheckIcon, LanguageIcon } from '@/components/Icons';
 import { Button } from '@/components/UI/Button';
+import { ThemeToggle } from '@/components/UI/ThemeToggle';
 
 export function Header() {
   const { user, walletBalance, language, setLanguage } = useApp();
@@ -26,11 +27,11 @@ export function Header() {
   if (!user) return null;
 
   return (
-    <Card variant="elevated" padding="md" className="mb-6">
+    <Card variant="elevated" padding="lg" className="mb-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h2 className="text-lg font-semibold text-gray-900">
+          <div className="flex items-center gap-3 mb-3">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
               {user.email || user.phone || 'User'}
             </h2>
             {user.selfVerified && (
@@ -41,15 +42,15 @@ export function Header() {
           </div>
           {user.walletAddress && (
             <div className="flex items-center gap-2">
-              <code className="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded">
+              <code className="text-xs font-mono text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1.5 rounded-lg">
                 {user.walletAddress.slice(0, 6)}...{user.walletAddress.slice(-4)}
               </code>
               <button
                 onClick={handleCopy}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                className="p-2 hover:bg-acid-lemon/10 rounded-lg transition-colors group"
                 aria-label="Copy address"
               >
-                <Icon color={copied ? 'success' : 'gray'}>
+                <Icon color={copied ? 'success' : 'gray'} className="group-hover:text-acid-lemon-dark">
                   {copied ? <CheckIcon /> : <CopyIcon />}
                 </Icon>
               </button>
@@ -58,16 +59,18 @@ export function Header() {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <div className="text-xs text-gray-500 mb-1">Balance</div>
-            <div className="text-sm font-semibold text-gray-900">
-              {walletBalance.USDC.toFixed(2)} USDC
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Quick Balance</div>
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100 financial-number">
+              {walletBalance.USDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">USDC</span>
             </div>
           </div>
+          <ThemeToggle size="sm" />
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleLanguage}
             aria-label="Toggle language"
+            className="border border-gray-200 dark:border-gray-700 hover:border-acid-lemon/30 dark:hover:border-acid-lemon/50"
           >
             <Icon>
               <LanguageIcon />
