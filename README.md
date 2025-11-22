@@ -1,7 +1,7 @@
 # NeonPay MX - Next.js
 
 A MiniApp mock for MiniPay that demonstrates the full UX flow connecting:
-- Mercado Pago (fiat rails) → Mock OAuth integration
+- Mercado Pago (fiat rails and ramps) → Mock OAuth integration
 - Privy (embedded wallets) → Mock authentication
 - Self Protocol (humanity verification) → Mock verification flow
 - Squid Router (cross-chain swaps) → Mock swap quotes
