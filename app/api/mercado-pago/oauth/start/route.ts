@@ -28,7 +28,8 @@ export async function GET(req: Request) {
   const challenge = codeMethod === 'PLAIN'
     ? verifier
     : crypto.createHash('sha256').update(verifier).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const url = new URL('https://auth.mercadopago.com/authorization');
+  const authHost = process.env.MERCADOPAGO_AUTH_HOST || 'auth.mercadopago.com';
+  const url = new URL(`https://${authHost}/authorization`);
   url.searchParams.set('client_id', clientId);
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('redirect_uri', redirectUri);
@@ -37,7 +38,8 @@ export async function GET(req: Request) {
     url.searchParams.set('code_challenge', challenge);
     url.searchParams.set('code_challenge_method', codeMethod);
   }
-  url.searchParams.set('scope', 'offline_access');
+  const scope = (process.env.OAUTH_SCOPE || 'offline_access').trim();
+  if (scope) url.searchParams.set('scope', scope);
   const resp = NextResponse.redirect(url.toString(), { status: 302 });
   if (pkceEnabled) {
     resp.cookies.set('mp_pkce_verifier', verifier, { httpOnly: true, sameSite: 'lax', path: '/' });

@@ -35,10 +35,19 @@ export async function GET(req: Request) {
     if (!storedState || storedState !== returnedState) {
       return NextResponse.json({ error: 'Invalid OAuth state' }, { status: 400 });
     }
+    const formBody = new URLSearchParams();
+    formBody.set('client_id', clientId);
+    formBody.set('client_secret', clientSecret);
+    formBody.set('grant_type', 'authorization_code');
+    formBody.set('code', String(code));
+    formBody.set('redirect_uri', redirectUri);
+    if (verifier) {
+      formBody.set('code_verifier', verifier);
+    }
     const tokenRes = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri, grant_type: 'authorization_code', ...(verifier ? { code_verifier: verifier } : {}) }),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody.toString(),
     });
     const data = await tokenRes.json();
     if (!tokenRes.ok) {
