@@ -8,6 +8,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { PrivyProvider } from '@privy-io/react-auth';
 import { getEnvironment } from '@/utils/wallet/detection';
 
 // Privy will be imported when package is installed
@@ -30,28 +31,23 @@ export function PrivyProviderWrapper({ children }: { children: React.ReactNode }
     return <>{children}</>;
   }
 
-  // For standalone mode, wrap with Privy provider
-  // TODO: Uncomment when @privy-io/react-auth is installed
-  /*
+  // Standalone: wrap with real Privy provider
   return (
     <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ''}
       config={{
-        loginMethods: ['email', 'phone'],
+        loginMethods: ['email', 'sms'],
         appearance: {
           theme: 'light',
         },
         embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
+          ethereum: {
+            createOnLogin: 'users-without-wallets',
+          },
         },
       }}
     >
       {children}
     </PrivyProvider>
   );
-  */
-
-  // Temporary: just render children until Privy is set up
-  return <>{children}</>;
 }
-

@@ -245,21 +245,11 @@ export function SettingsScreen() {
                         </div>
                       )}
                       <Button
-                        variant={mercadoPago.connected ? 'secondary' : 'primary'}
+                        variant="secondary"
                         size="sm"
-                        onClick={() => {
-                          if (mercadoPago.connected) {
-                            // Disconnect logic
-                            showToast({
-                              type: 'info',
-                              message: 'Mercado Pago disconnected',
-                            });
-                          } else {
-                            router.push('/connect-mercado');
-                          }
-                        }}
+                        onClick={() => router.push('/mercado-pago')}
                       >
-                        {mercadoPago.connected ? t.disconnect : t.connect}
+                        {language === 'en' ? 'Open Mercado Pago' : 'Abrir Mercado Pago'}
                       </Button>
                     </div>
                   </div>
@@ -423,4 +413,3 @@ export function SettingsScreen() {
     </Container>
   );
 }
-

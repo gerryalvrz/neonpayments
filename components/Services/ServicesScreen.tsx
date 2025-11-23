@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Container } from '@/components/Layout/Container';
@@ -11,6 +11,8 @@ import { Input } from '@/components/UI/Input';
 import { Select, SelectOption } from '@/components/UI/Select';
 import { Badge } from '@/components/UI/Badge';
 import { Icon, MobileIcon, BoltIcon, WaterIcon, WifiIcon, BusIcon, ShoppingBagIcon, CreditCardIcon, CheckCircleIcon } from '@/components/Icons';
+import { initMercadoPago, Payment, Wallet } from '@mercadopago/sdk-react';
+import StatusScreen from '@mercadopago/sdk-react/esm/bricks/statusScreen';
 import type { ServiceCategory, ServiceProvider } from '@/types';
 
 // Service providers available in Mexico via Mercado Pago
@@ -54,7 +56,7 @@ const categoryColors = {
 
 export function ServicesScreen() {
   const router = useRouter();
-  const { mercadoPago, language, addTransaction, addNotification, setMercadoPago } = useApp();
+  const { mercadoPago, language, addTransaction, addNotification, setMercadoPago, user } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | 'all'>('all');
   const [selectedProvider, setSelectedProvider] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
@@ -62,6 +64,24 @@ export function ServicesScreen() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [step, setStep] = useState<'select' | 'details' | 'confirm' | 'processing' | 'success'>('select');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderResult, setOrderResult] = useState<any>(null);
+  const [orderError, setOrderError] = useState<string>('');
+  const [formError, setFormError] = useState<string>('');
+  const [preferenceId, setPreferenceId] = useState<string>('');
+  const demoMode = process.env.NEXT_PUBLIC_MP_DEMO_MODE === 'true';
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_MERCADOLIBRE_PUBLIC_KEY as string;
+    if (key) initMercadoPago(key);
+    (async () => {
+      try {
+        const res = await fetch('/api/mercado-pago/oauth/status', { cache: 'no-store' });
+        const data = await res.json();
+        setIsConnected(Boolean(data?.connected));
+      } catch {}
+    })();
+  }, []);
 
   const labels = {
     en: {
@@ -142,36 +162,7 @@ export function ServicesScreen() {
 
   const t = labels[language];
 
-  // Check if Mercado Pago is connected
-  if (!mercadoPago.connected) {
-    return (
-      <Container>
-        <div className="py-8">
-          <BackButton />
-          <Card padding="lg" className="max-w-md mx-auto text-center">
-            <Icon size="xl" color="neon" className="mb-4">
-              <CreditCardIcon />
-            </Icon>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.title}</h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">{t.subtitle}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              {language === 'en' 
-                ? 'Please connect your Mercado Pago account first'
-                : 'Por favor conecta tu cuenta de Mercado Pago primero'}
-            </p>
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              onClick={() => router.push('/connect-mercado')}
-            >
-              {language === 'en' ? 'Connect Mercado Pago' : 'Conectar Mercado Pago'}
-            </Button>
-          </Card>
-        </div>
-      </Container>
-    );
-  }
+  
 
   const filteredProviders = selectedCategory === 'all'
     ? serviceProviders
@@ -217,7 +208,7 @@ export function ServicesScreen() {
       }
     }
     
-    if (amountNum > mercadoPago.balance) return t.errors.insufficientFunds;
+    
     
     if (selectedProviderData?.requiresAccountNumber && !accountNumber) {
       return t.errors.enterAccountNumber;
@@ -230,9 +221,10 @@ export function ServicesScreen() {
     return null;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     const error = validateForm();
     if (error) {
+      setFormError(error);
       addNotification({
         type: 'system',
         title: language === 'en' ? 'Validation Error' : 'Error de Validación',
@@ -240,48 +232,51 @@ export function ServicesScreen() {
       });
       return;
     }
+    setFormError('');
     setStep('confirm');
+    await handleSubmitPayment({});
   };
 
-  const handleConfirm = async () => {
-    setIsProcessing(true);
-    setStep('processing');
-    
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const amountNum = parseFloat(amount);
-    
-    // Update Mercado Pago balance
-    setMercadoPago({
-      ...mercadoPago,
-      balance: mercadoPago.balance - amountNum,
-    });
-    
-    // Add transaction
-    addTransaction({
-      id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'service',
-      status: 'completed',
-      fromToken: 'MXN',
-      toToken: 'MXN',
-      fromAmount: amountNum,
-      toAmount: amountNum,
-      timestamp: Date.now(),
-      description: `${selectedProviderData?.name} - ${selectedProviderData?.category === 'mobile' ? phoneNumber : accountNumber}`,
-    });
-    
-    // Add notification
-    addNotification({
-      type: 'transaction',
-      title: language === 'en' ? 'Payment Successful' : 'Pago Exitoso',
-      message: language === 'en' 
-        ? `Successfully paid $${amountNum.toFixed(2)} to ${selectedProviderData?.name}`
-        : `Pago exitoso de $${amountNum.toFixed(2)} a ${selectedProviderData?.name}`,
-    });
-    
-    setStep('success');
-    setIsProcessing(false);
+  const handleSubmitPayment = async ({ selectedPaymentMethod, formData }: any = {}) => {
+    try {
+      setIsProcessing(true);
+      setOrderError('');
+      setStep('processing');
+      addNotification({
+        type: 'system',
+        title: language === 'en' ? 'Creating SPEI payment' : 'Creando pago SPEI',
+        message: language === 'en' ? 'Generating bank transfer instructions…' : 'Generando instrucciones de transferencia…',
+      });
+      const payerEmail = user?.email || formData?.payer?.email || '';
+      const payRes = await fetch('/api/mercado-pago/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount: parseFloat(amount),
+          description: `${selectedProviderData?.name || 'Service'} ${selectedProvider ? `(${selectedProvider})` : ''}`,
+          externalReference: `${selectedProvider}-${Date.now()}`,
+          payerEmail,
+          payment_method_id: 'clabe',
+        }),
+      });
+      const payData = await payRes.json();
+      if (!payRes.ok) {
+        const errMsg = typeof payData?.error === 'string' ? payData.error : payData?.error?.message || JSON.stringify(payData?.error || 'Payment failed');
+        setOrderError(errMsg);
+        addNotification({ type: 'system', title: language === 'en' ? 'Payment Failed' : 'Pago fallido', message: String(errMsg) });
+        setIsProcessing(false);
+        setStep('confirm');
+        return;
+      }
+      setOrderResult(payData?.payment || payData);
+      setIsProcessing(false);
+      setStep('success');
+    } catch (e: any) {
+      setOrderError(e?.message || 'Unexpected error');
+      setIsProcessing(false);
+      setStep('confirm');
+    }
   };
 
   const handleReset = () => {
@@ -301,6 +296,20 @@ export function ServicesScreen() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t.title}</h1>
           <p className="text-gray-600 dark:text-gray-300">{t.subtitle}</p>
         </div>
+        {!isConnected && (
+          <Card padding="md" className="max-w-md mx-auto mb-6">
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              {language === 'en' 
+                ? 'Connect Mercado Pago to pay services from this app.'
+                : 'Conecta Mercado Pago para pagar servicios desde esta app.'}
+            </p>
+            <div className="mt-3">
+              <Button variant="primary" size="lg" fullWidth onClick={() => router.push('/connect-mercado')}>
+                {language === 'en' ? 'Connect Mercado Pago' : 'Conectar Mercado Pago'}
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Balance Card */}
         <Card padding="lg" className="mb-6 bg-gradient-to-br from-acid-lemon/10 via-acid-lemon/5 to-transparent">
@@ -318,7 +327,7 @@ export function ServicesScreen() {
         </Card>
 
         {/* Category Filter */}
-        {step === 'select' && (
+        {isConnected && step === 'select' && (
           <div className="mb-6">
             <Select
               label={t.selectService}
@@ -330,7 +339,7 @@ export function ServicesScreen() {
         )}
 
         {/* Step 1: Select Provider */}
-        {step === 'select' && (
+        {isConnected && step === 'select' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredProviders.map((provider) => {
               const IconComponent = categoryIcons[provider.category];
@@ -367,7 +376,7 @@ export function ServicesScreen() {
         )}
 
         {/* Step 2: Enter Details */}
-        {step === 'details' && selectedProviderData && (
+        {isConnected && step === 'details' && selectedProviderData && (
           <Card padding="lg" className="max-w-md mx-auto">
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-4">
@@ -434,13 +443,15 @@ export function ServicesScreen() {
                 >
                   {t.continue}
                 </Button>
+                {formError && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-2">{formError}</p>
+                )}
               </div>
             </div>
           </Card>
         )}
 
-        {/* Step 3: Confirm */}
-        {step === 'confirm' && selectedProviderData && (
+        {isConnected && step === 'confirm' && selectedProviderData && (
           <Card padding="lg" className="max-w-md mx-auto">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">{t.confirm}</h2>
             
@@ -471,31 +482,39 @@ export function ServicesScreen() {
                 </span>
               </div>
             </div>
-
-            <div className="flex gap-3">
-              <Button
-                variant="ghost"
-                size="lg"
-                fullWidth
-                onClick={() => setStep('details')}
-              >
-                {t.back}
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                fullWidth
-                onClick={handleConfirm}
-                loading={isProcessing}
-              >
-                {t.confirm}
-              </Button>
+              <div className="space-y-4">
+              <div>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  loading={isProcessing}
+                  disabled={isProcessing}
+                  onClick={() => handleSubmitPayment({})}
+                >
+                  {language === 'en' ? 'Create SPEI Order' : 'Crear orden SPEI'}
+                </Button>
+              </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="ghost"
+                  size="lg"
+                  fullWidth
+                  onClick={() => setStep('details')}
+                >
+                  {t.back}
+                </Button>
+              </div>
+              {orderError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{orderError}</p>
+              )}
+              {/* SPEI flow handled server-side; instructions will appear after payment creation */}
             </div>
           </Card>
         )}
 
         {/* Step 4: Processing */}
-        {step === 'processing' && (
+        {isConnected && step === 'processing' && (
           <Card padding="lg" className="max-w-md mx-auto text-center">
             <div className="py-8">
               <div className="animate-spin mx-auto mb-4 w-12 h-12 border-4 border-acid-lemon border-t-transparent rounded-full"></div>
@@ -504,18 +523,143 @@ export function ServicesScreen() {
           </Card>
         )}
 
-        {/* Step 5: Success */}
-        {step === 'success' && selectedProviderData && (
+        {isConnected && step === 'success' && selectedProviderData && (
           <Card padding="lg" className="max-w-md mx-auto text-center">
             <Icon size="xl" color="success" className="mb-4">
               <CheckCircleIcon />
             </Icon>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.success}</h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              {language === 'en'
-                ? `Payment of $${parseFloat(amount).toFixed(2)} to ${selectedProviderData.name} has been processed successfully.`
-                : `El pago de $${parseFloat(amount).toFixed(2)} a ${selectedProviderData.name} se ha procesado exitosamente.`}
-            </p>
+            <div className="text-gray-600 dark:text-gray-300 mb-6">
+              <p className="mb-2">
+                {language === 'en'
+                  ? `Payment created for $${parseFloat(amount).toFixed(2)} to ${selectedProviderData.name}.`
+                  : `Pago creado por $${parseFloat(amount).toFixed(2)} a ${selectedProviderData.name}.`}
+              </p>
+              {orderResult && (
+                <div className="text-sm space-y-1">
+                  <p>ID: {String(orderResult?.id || orderResult?.order?.id || '')}</p>
+                  <p>Status: {String(orderResult?.status || orderResult?.order?.status || 'pending')}</p>
+                  {(selectedProviderData?.name || orderResult?.service?.providerId) && (
+                    <p>Servicio: {String(selectedProviderData?.name || orderResult?.service?.providerId || '')}</p>
+                  )}
+                  {(orderResult?.service?.phoneNumber || phoneNumber) && (
+                    <p>Teléfono: {String(orderResult?.service?.phoneNumber || phoneNumber)}</p>
+                  )}
+                  {(orderResult?.service?.accountNumber || accountNumber) && (
+                    <p>Cuenta: {String(orderResult?.service?.accountNumber || accountNumber)}</p>
+                  )}
+                  {orderResult?.order?.transactions?.payments?.[0]?.reference_id && (
+                    <p>Referencia: {String(orderResult?.order?.transactions?.payments?.[0]?.reference_id)}</p>
+                  )}
+                  {orderResult?.payment_method?.data?.reference_id && (
+                    <p>Referencia: {String(orderResult?.payment_method?.data?.reference_id)}</p>
+                  )}
+                  {orderResult?.payment_method?.data?.external_reference_id && (
+                    <p>Ref externa: {String(orderResult?.payment_method?.data?.external_reference_id)}</p>
+                  )}
+                  {orderResult?.transaction_details?.external_resource_url && (
+                    <a href={String(orderResult?.transaction_details?.external_resource_url)} target="_blank" rel="noreferrer" className="text-acid-lemon underline">Ver instrucciones SPEI</a>
+                  )}
+                  {orderResult?.order?.transactions?.payments?.[0]?.payment_method?.ticket_url && (
+                    <a href={String(orderResult?.order?.transactions?.payments?.[0]?.payment_method?.ticket_url)} target="_blank" rel="noreferrer" className="text-acid-lemon underline">Ver instrucciones SPEI</a>
+                  )}
+                  {orderResult?.payment_method?.data?.clabe && (
+                    <p>CLABE: {String(orderResult?.payment_method?.data?.clabe)}</p>
+                  )}
+                  {orderResult?.order?.transactions?.payments?.[0]?.payment_method?.data?.clabe && (
+                    <p>CLABE: {String(orderResult?.order?.transactions?.payments?.[0]?.payment_method?.data?.clabe)}</p>
+                  )}
+                  {orderResult?.payment_details?.transaction_details?.external_resource_url && (
+                    <a href={String(orderResult?.payment_details?.transaction_details?.external_resource_url)} target="_blank" rel="noreferrer" className="text-acid-lemon underline">Ver instrucciones SPEI</a>
+                  )}
+                  {orderResult?.payment_details?.payment_method?.data?.clabe && (
+                    <p>CLABE: {String(orderResult?.payment_details?.payment_method?.data?.clabe)}</p>
+                  )}
+                  {orderResult?.order?.transactions?.payments?.[0]?.payment_method?.reference && (
+                    <p>CLABE: {String(orderResult?.order?.transactions?.payments?.[0]?.payment_method?.reference)}</p>
+                  )}
+                </div>
+              )}
+              <div className="mt-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {(orderResult?.payment_details?.payment_method?.data?.clabe || orderResult?.order?.transactions?.payments?.[0]?.payment_method?.data?.clabe || orderResult?.transaction_details?.external_resource_url || orderResult?.payment_details?.transaction_details?.external_resource_url) && (
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => {
+                      const mxn = parseFloat(amount) || 0;
+                      const usdc = mxn * 0.055;
+                      addTransaction({
+                        id: `tx_usdc_${Date.now()}`,
+                        type: 'service',
+                        status: 'pending',
+                        fromToken: 'USDC',
+                        toToken: 'MXN',
+                        fromAmount: usdc,
+                        toAmount: mxn,
+                        timestamp: Date.now(),
+                        description: `${selectedProviderData?.name} via USDC → SPEI`,
+                      });
+                      addNotification({
+                        type: 'transaction',
+                        title: language === 'en' ? 'USDC Payment Initiated' : 'Pago en USDC iniciado',
+                        message: language === 'en' ? 'We will settle SPEI using MCP instructions.' : 'Se liquidará SPEI usando instrucciones de MCP.',
+                      });
+                    }}
+                  >
+                    {language === 'en' ? 'Pay with USDC' : 'Pagar con USDC'}
+                  </Button>
+                  )}
+                  {(orderResult?.payment_details?.payment_method?.data?.clabe || orderResult?.order?.transactions?.payments?.[0]?.payment_method?.data?.clabe || orderResult?.transaction_details?.external_resource_url || orderResult?.payment_details?.transaction_details?.external_resource_url) && (
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => {
+                      const mxn = parseFloat(amount) || 0;
+                      const usdt = mxn * 0.055;
+                      addTransaction({
+                        id: `tx_usdt_${Date.now()}`,
+                        type: 'service',
+                        status: 'pending',
+                        fromToken: 'USDT',
+                        toToken: 'MXN',
+                        fromAmount: usdt,
+                        toAmount: mxn,
+                        timestamp: Date.now(),
+                        description: `${selectedProviderData?.name} via USDT → SPEI`,
+                      });
+                      addNotification({
+                        type: 'transaction',
+                        title: language === 'en' ? 'USDT Payment Initiated' : 'Pago en USDT iniciado',
+                        message: language === 'en' ? 'We will settle SPEI using MCP instructions.' : 'Se liquidará SPEI usando instrucciones de MCP.',
+                      });
+                    }}
+                  >
+                    {language === 'en' ? 'Pay with USDT' : 'Pagar con USDT'}
+                  </Button>
+                  )}
+                </div>
+              </div>
+              {(() => {
+                const statusPaymentId = String(
+                  orderResult?.payment_details?.id ||
+                  orderResult?.order?.transactions?.payments?.[0]?.id ||
+                  ''
+                );
+                const isNumericId = /^\d+$/.test(statusPaymentId);
+                if (isNumericId) {
+                  return (
+                    <div className="mt-4">
+                      <StatusScreen
+                        initialization={{ paymentId: statusPaymentId }}
+                        locale={language === 'en' ? 'en-US' : 'es-MX'}
+                      />
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+            </div>
             <div className="flex gap-3">
               <Button
                 variant="ghost"
@@ -540,4 +684,3 @@ export function ServicesScreen() {
     </Container>
   );
 }
-

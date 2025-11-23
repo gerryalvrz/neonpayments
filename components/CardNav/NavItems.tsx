@@ -59,16 +59,12 @@ export function useNavItems(): CardNavItem[] {
   const paymentLinks: CardNavLink[] = [
     { label: t.sendMoney, href: '/send', ariaLabel: 'Send Money' },
     { label: t.addFunds, href: '/topup', ariaLabel: 'Add Funds' },
-    ...(mercadoPago.connected
-      ? [{ label: t.payServices, href: '/services', ariaLabel: 'Pay Services' } as CardNavLink]
-      : []),
+    { label: language === 'en' ? 'Mercado Pago' : 'Mercado Pago', href: '/mercado-pago', ariaLabel: 'Mercado Pago' },
+    { label: t.payServices, href: '/services', ariaLabel: 'Pay Services' },
     { label: t.swapTokens, href: '/swap', ariaLabel: 'Swap Tokens' },
   ];
 
   const accountLinks: CardNavLink[] = [
-    ...(mercadoPago.connected
-      ? []
-      : [{ label: t.connectMercado, href: '/connect-mercado', ariaLabel: 'Connect Mercado Pago' } as CardNavLink]),
     ...(user && !user.selfVerified
       ? [{ label: t.verifyIdentity, href: '/verify-self', ariaLabel: 'Verify Identity' } as CardNavLink]
       : []),
@@ -113,4 +109,3 @@ export function useNavItems(): CardNavItem[] {
 
   return items;
 }
-

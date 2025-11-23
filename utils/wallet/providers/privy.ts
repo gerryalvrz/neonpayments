@@ -15,6 +15,16 @@ export class PrivyProvider implements WalletProvider {
     // This provider acts as an adapter
   }
 
+  private getAddressFromPrivy(): string | null {
+    if (!this.privy) return null;
+    const u = this.privy.user;
+    const fromUser = u?.wallet?.address || null;
+    const fromWallets = Array.isArray(this.privy.wallets) && this.privy.wallets.length > 0
+      ? this.privy.wallets[0]?.address
+      : null;
+    return fromUser || fromWallets || null;
+  }
+
   getType(): 'privy' {
     return 'privy';
   }
@@ -49,7 +59,7 @@ export class PrivyProvider implements WalletProvider {
         await this.privy.login();
       }
 
-      const address = this.privy.user?.wallet?.address;
+      const address = this.getAddressFromPrivy();
       if (!address) {
         throw new Error('No wallet address found');
       }
@@ -83,7 +93,7 @@ export class PrivyProvider implements WalletProvider {
     }
 
     try {
-      const address = this.privy.user?.wallet?.address;
+      const address = this.getAddressFromPrivy();
       if (!address) {
         this.account = null;
         return null;
@@ -107,7 +117,7 @@ export class PrivyProvider implements WalletProvider {
 
   async getAddress(): Promise<string | null> {
     const account = await this.getAccount();
-    return account?.address || null;
+    return account?.address || this.getAddressFromPrivy();
   }
 
   async signTransaction(transaction: TransactionRequest): Promise<string> {
@@ -163,4 +173,3 @@ export class PrivyProvider implements WalletProvider {
     return () => {};
   }
 }
-

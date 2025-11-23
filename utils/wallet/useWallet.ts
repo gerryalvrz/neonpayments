@@ -8,9 +8,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import { getWalletProvider, getProviderByType } from './providers';
 import { getEnvironment } from './detection';
 import type { WalletProvider, WalletAccount, WalletState, TransactionRequest } from './types';
+import { PrivyProvider as PrivyProviderClass } from './providers/privy';
 
 export function useWallet() {
   const [state, setState] = useState<WalletState>({
@@ -19,6 +21,7 @@ export function useWallet() {
     isConnecting: false,
     error: null,
   });
+  const privy = usePrivy();
 
   const provider = useMemo(() => {
     const env = getEnvironment();
@@ -31,6 +34,22 @@ export function useWallet() {
     
     return null;
   }, []);
+
+  useEffect(() => {
+    if (!provider) return;
+    if (provider.getType() === 'privy') {
+      (provider as PrivyProviderClass).initialize(privy);
+    }
+  }, [provider, privy]);
+
+  useEffect(() => {
+    if (!provider) return;
+    if (provider.getType() !== 'privy') return;
+    if (!privy) return;
+    if (!privy.ready) return;
+    // Keep account in sync with Privy session
+    checkConnection();
+  }, [provider, privy.ready, privy.authenticated, privy.user]);
 
   // Auto-connect on mount if in MiniPay
   useEffect(() => {
@@ -180,4 +199,3 @@ export function useWallet() {
     provider,
   };
 }
-

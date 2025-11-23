@@ -496,4 +496,14 @@ export function formatApiError(error: unknown): string {
 export function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-
+export async function createSpeiOrder(amount: number, payerEmail: string, externalReference?: string, processingMode: 'manual' | 'automatic' = 'manual') {
+  const res = await fetch('/api/mercado-pago/order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount, payerEmail, processingMode, externalReference }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to create SPEI order');
+  }
+  return res.json();
+}

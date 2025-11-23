@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Container } from '@/components/Layout/Container';
@@ -12,7 +12,8 @@ import { Icon, CreditCardIcon, WalletIcon, SendIcon, CheckCircleIcon, ArrowDownI
 
 export function HomeScreen() {
   const router = useRouter();
-  const { user, mercadoPago, walletBalance, transactions, notifications, language } = useApp();
+  const { user, mercadoPago, walletBalance, transactions, notifications, language, wallet } = useApp();
+  const [error, setError] = useState('');
 
   const labels = {
     en: {
@@ -69,12 +70,24 @@ export function HomeScreen() {
         <div className="min-h-screen flex items-center justify-center py-12">
           <Card padding="lg" className="max-w-md w-full text-center">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t.title}</h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">{t.subtitle}</p>
+            <p className="text-gray-600 dark:text-gray-300 mb-3">{t.subtitle}</p>
+            {error && (
+              <div className="mb-3 text-sm text-semantic-error">{error}</div>
+            )}
             <Button
               variant="primary"
               size="lg"
               fullWidth
-              onClick={() => router.push('/auth')}
+              onClick={async () => {
+                setError('');
+                try {
+                  await wallet.connect();
+                } catch (e: any) {
+                  setError(e?.message || 'Failed to connect wallet');
+                }
+              }}
+              loading={wallet.isConnecting}
+              disabled={wallet.isConnecting}
             >
               <Icon>
                 <WalletIcon />
@@ -268,35 +281,19 @@ export function HomeScreen() {
 
         {/* Additional Actions - Enhanced */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!mercadoPago.connected ? (
-            <Card variant="interactive" padding="lg" onClick={() => router.push('/connect-mercado')} className="group">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-br from-acid-lemon/20 to-acid-lemon/10 rounded-xl group-hover:scale-110 transition-transform duration-200">
-                  <Icon size="lg" color="neon">
-                    <CreditCardIcon />
-                  </Icon>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 dark:text-white mb-1">{t.connectMercado}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Link your Mercado Pago account</p>
-                </div>
+          <Card variant="interactive" padding="lg" onClick={() => router.push('/services')} className="group">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-gradient-to-br from-acid-lemon/20 to-acid-lemon/10 rounded-xl group-hover:scale-110 transition-transform duration-200">
+                <Icon size="lg" color="neon">
+                  <CreditCardIcon />
+                </Icon>
               </div>
-            </Card>
-          ) : (
-            <Card variant="interactive" padding="lg" onClick={() => router.push('/services')} className="group">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-br from-acid-lemon/20 to-acid-lemon/10 rounded-xl group-hover:scale-110 transition-transform duration-200">
-                  <Icon size="lg" color="neon">
-                    <CreditCardIcon />
-                  </Icon>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 dark:text-white mb-1">{language === 'en' ? 'Pay Services' : 'Pagar Servicios'}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{language === 'en' ? 'Pay bills and top-up services' : 'Paga facturas y recarga servicios'}</p>
-                </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 dark:text-white mb-1">{language === 'en' ? 'Pay Services' : 'Pagar Servicios'}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{language === 'en' ? 'Pay bills and top-up services' : 'Paga facturas y recarga servicios'}</p>
               </div>
-            </Card>
-          )}
+            </div>
+          </Card>
 
           {!user.selfVerified && (
             <Card variant="interactive" padding="lg" onClick={() => router.push('/verify-self')} className="group">

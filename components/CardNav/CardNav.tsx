@@ -51,7 +51,17 @@ const CardNav: React.FC<CardNavProps> = ({
   const tlRef = useRef<gsap.core.Timeline | null>(null);
 
   // Use current color scheme if not provided
-  const finalBaseColor = baseColor || 'rgba(204, 255, 0, 0.2)'; // glass-acid
+  const [isMobile, setIsMobile] = useState(false);
+  useLayoutEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = () => setIsMobile(mq.matches);
+    handler();
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  const finalBaseColor = isMobile
+    ? 'rgba(17, 24, 39, 0.85)'
+    : (baseColor || 'rgba(204, 255, 0, 0.2)');
   const finalMenuColor = menuColor || '#CCFF00'; // acid-lemon
   const finalButtonBgColor = buttonBgColor || '#CCFF00'; // acid-lemon
   const finalButtonTextColor = buttonTextColor || '#000'; // black for contrast
@@ -228,19 +238,19 @@ const CardNav: React.FC<CardNavProps> = ({
       >
         <div className="card-nav-top absolute inset-x-0 top-0 h-[60px] flex items-center justify-between p-2 pl-[1.1rem] z-[2]">
           <div
-            className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''} group h-full flex flex-col items-center justify-center cursor-pointer gap-[6px] order-2 md:order-none text-gray-900 dark:text-white`}
+            className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''} group h-full flex flex-col items-center justify-center cursor-pointer gap-[6px] order-2 md:order-none text-gray-900 dark:text-white md:bg-transparent md:shadow-none bg-white/90 dark:bg-gray-900/80 rounded-xl px-2 py-2 shadow-sm`}
             onClick={toggleMenu}
             role="button"
             aria-label={isExpanded ? 'Close menu' : 'Open menu'}
             tabIndex={0}
           >
             <div
-              className={`hamburger-line w-[30px] h-[2px] bg-current transition-[transform,opacity,margin] duration-300 ease-linear [transform-origin:50%_50%] ${
+              className={`hamburger-line w-[26px] h-[3px] bg-current transition-[transform,opacity,margin] duration-300 ease-linear [transform-origin:50%_50%] ${
                 isHamburgerOpen ? 'translate-y-[4px] rotate-45' : ''
               } group-hover:opacity-75`}
             />
             <div
-              className={`hamburger-line w-[30px] h-[2px] bg-current transition-[transform,opacity,margin] duration-300 ease-linear [transform-origin:50%_50%] ${
+              className={`hamburger-line w-[26px] h-[3px] bg-current transition-[transform,opacity,margin] duration-300 ease-linear [transform-origin:50%_50%] ${
                 isHamburgerOpen ? '-translate-y-[4px] -rotate-45' : ''
               } group-hover:opacity-75`}
             />
@@ -328,5 +338,3 @@ const CardNav: React.FC<CardNavProps> = ({
 };
 
 export default CardNav;
-
-
