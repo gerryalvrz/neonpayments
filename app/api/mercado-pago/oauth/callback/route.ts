@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     const tokenRes = await fetch('https://api.mercadopago.com/oauth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri, grant_type: 'authorization_code', code_verifier: verifier }),
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: redirectUri, grant_type: 'authorization_code', ...(verifier ? { code_verifier: verifier } : {}) }),
     });
     const data = await tokenRes.json();
     if (!tokenRes.ok) {
