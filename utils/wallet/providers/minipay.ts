@@ -24,7 +24,7 @@ export class MiniPayProvider implements WalletProvider {
     if (typeof window === 'undefined') return false;
     
     const ethereum = (window as any).ethereum;
-    return !!(ethereum?.isMiniPay === true || (window as any).minipay);
+    return !!(ethereum?.isMiniPay === true || (window as any).minipay || ethereum?.selectedAddress);
   }
 
   async connect(): Promise<WalletAccount> {
@@ -174,4 +174,3 @@ export class MiniPayProvider implements WalletProvider {
     };
   }
 }
-

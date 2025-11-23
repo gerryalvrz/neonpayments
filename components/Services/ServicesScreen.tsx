@@ -247,7 +247,7 @@ export function ServicesScreen() {
         title: language === 'en' ? 'Creating SPEI payment' : 'Creando pago SPEI',
         message: language === 'en' ? 'Generating bank transfer instructions…' : 'Generando instrucciones de transferencia…',
       });
-      const payerEmail = user?.email || formData?.payer?.email || '';
+      const payerEmail = user?.email || formData?.payer?.email || 'default@gmail.com';
       const payRes = await fetch('/api/mercado-pago/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -525,15 +525,12 @@ export function ServicesScreen() {
 
         {isConnected && step === 'success' && selectedProviderData && (
           <Card padding="lg" className="max-w-md mx-auto text-center">
-            <Icon size="xl" color="success" className="mb-4">
-              <CheckCircleIcon />
-            </Icon>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.success}</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{language === 'en' ? 'Payment Created (Pending)' : 'Pago creado (pendiente)'}</h2>
             <div className="text-gray-600 dark:text-gray-300 mb-6">
               <p className="mb-2">
                 {language === 'en'
-                  ? `Payment created for $${parseFloat(amount).toFixed(2)} to ${selectedProviderData.name}.`
-                  : `Pago creado por $${parseFloat(amount).toFixed(2)} a ${selectedProviderData.name}.`}
+                  ? `Payment created for $${parseFloat(amount).toFixed(2)} to ${selectedProviderData.name}. Status is pending until funds are received.`
+                  : `Pago creado por $${parseFloat(amount).toFixed(2)} a ${selectedProviderData.name}. El estado es pendiente hasta recibir fondos.`}
               </p>
               {orderResult && (
                 <div className="text-sm space-y-1">
@@ -607,7 +604,7 @@ export function ServicesScreen() {
                       });
                     }}
                   >
-                    {language === 'en' ? 'Pay with USDC' : 'Pagar con USDC'}
+                    {language === 'en' ? 'Initiate USDC Transfer' : 'Iniciar transferencia USDC'}
                   </Button>
                   )}
                   {(orderResult?.payment_details?.payment_method?.data?.clabe || orderResult?.order?.transactions?.payments?.[0]?.payment_method?.data?.clabe || orderResult?.transaction_details?.external_resource_url || orderResult?.payment_details?.transaction_details?.external_resource_url) && (
@@ -635,7 +632,7 @@ export function ServicesScreen() {
                       });
                     }}
                   >
-                    {language === 'en' ? 'Pay with USDT' : 'Pagar con USDT'}
+                    {language === 'en' ? 'Initiate USDT Transfer' : 'Iniciar transferencia USDT'}
                   </Button>
                   )}
                 </div>

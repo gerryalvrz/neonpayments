@@ -2,14 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const envAccess =
-      process.env.MERCADOPAGO_ACCESS_TOKEN ||
-      process.env.MERCADOLIBRE_ACCESS_TOKEN ||
-      process.env.MERCADOLIBER_ACCESS_TOKEN ||
-      process.env.MERCADO_PAGO_ACCESS_TOKEN ||
-      process.env.MP_ACCESS_TOKEN ||
-      '';
-    const accessToken = envAccess;
+    const accessToken = process.env.MERCADOLIBER_ACCESS_TOKEN || '';
     if (!accessToken) {
       return NextResponse.json({ error: 'Missing access token (server env not set)' }, { status: 500 });
     }
