@@ -35,6 +35,8 @@ interface AppContextType {
     isMiniPay: boolean;
     connect: () => Promise<void>;
     disconnect: () => Promise<void>;
+    getTokenBalance: (tokenAddress: string, address?: string) => Promise<{ balance: bigint; decimals: number; symbol: string }>;
+    sendToken: (tokenAddress: string, to: string, amountAtomic: bigint, gasLimit?: string, gasPrice?: string) => Promise<string>;
   };
   
   setUser: (user: User | null) => void;

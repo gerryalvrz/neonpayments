@@ -130,16 +130,45 @@ export class PrivyProvider implements WalletProvider {
     }
 
     try {
-      // Use Privy's sendTransaction method
-      const txHash = await this.privy.sendTransaction({
-        to: transaction.to,
-        value: transaction.value || '0x0',
-        data: transaction.data || '0x',
-        gasLimit: transaction.gasLimit,
-        gasPrice: transaction.gasPrice,
-      });
+      const from = this.account.address;
+      const chainIdDec = 42220;
+      const chainIdHex = '0xa4ec'; // 42220
 
-      return txHash;
+      // Prefer embedded wallet EIP-1193 provider if available
+      const provider = this.privy?.ethereum || this.privy?.provider;
+      if (provider?.request) {
+        const txHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [
+            {
+              from,
+              to: transaction.to,
+              value: transaction.value || '0x0',
+              data: transaction.data || '0x',
+              gas: transaction.gasLimit,
+              gasPrice: transaction.gasPrice,
+              chainId: chainIdHex,
+            },
+          ],
+        });
+        return txHash;
+      }
+
+      // Fallback to Privy helper if present
+      if (this.privy.sendTransaction) {
+        const txHash = await this.privy.sendTransaction({
+          from,
+          to: transaction.to,
+          value: transaction.value || '0x0',
+          data: transaction.data || '0x',
+          gasLimit: transaction.gasLimit,
+          gasPrice: transaction.gasPrice,
+          chainId: chainIdDec,
+        });
+        return txHash;
+      }
+
+      throw new Error('No transaction method available');
     } catch (error: any) {
       throw new Error(`Failed to sign transaction: ${error.message}`);
     }

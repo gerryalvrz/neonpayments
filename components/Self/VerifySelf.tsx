@@ -10,6 +10,7 @@ import { Card } from '@/components/UI/Card';
 import { Button } from '@/components/UI/Button';
 import { Icon, CheckCircleIcon } from '@/components/Icons';
 import { SelfQRcodeWrapper, SelfAppBuilder, countries } from '@selfxyz/qrcode';
+import { getUniversalLink } from '@selfxyz/core';
 
 type Step = 'intro' | 'qr' | 'success';
 
@@ -18,6 +19,7 @@ export function VerifySelf() {
   const { setSelfVerification, setUser, user, language } = useApp();
   const [step, setStep] = useState<Step>('intro');
   const [selfApp, setSelfApp] = useState<any | null>(null);
+  const [deeplink, setDeeplink] = useState<string>('');
 
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export function VerifySelf() {
       endpointType: 'staging_celo',
       chainID: 11142220 as any,
       userIdType: 'hex',
+      deeplinkCallback: process.env.NEXT_PUBLIC_SELF_DEEPLINK_CALLBACK || undefined,
       disclosures: {
         minimumAge: 18,
       },
@@ -71,6 +74,10 @@ export function VerifySelf() {
 
     setSelfApp(app);
     console.log('selfApp config', app);
+    try {
+      const link = getUniversalLink(app);
+      setDeeplink(link);
+    } catch {}
     setStep('qr');
   };
 
@@ -125,12 +132,21 @@ export function VerifySelf() {
 
           {step === 'qr' && selfApp && (
             <div className="space-y-4">
-              <SelfQRcodeWrapper
-                selfApp={selfApp}
-                onSuccess={handleSuccessfulVerification}
-                onError={handleError}
-                type="deeplink"
-              />
+              <div className="md:hidden space-y-3">
+                <Button variant="primary" size="lg" fullWidth onClick={() => window.open(deeplink, '_blank')}>
+                  {language === 'en' ? 'Open Self App' : 'Abrir Self App'}
+                </Button>
+                {deeplink && (
+                  <code className="block text-xs break-all text-gray-500">{deeplink}</code>
+                )}
+              </div>
+              <div className="hidden md:block">
+                <SelfQRcodeWrapper
+                  selfApp={selfApp}
+                  onSuccess={handleSuccessfulVerification}
+                  onError={handleError}
+                />
+              </div>
             </div>
           )}
 
