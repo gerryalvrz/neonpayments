@@ -11,7 +11,10 @@
   "dependencies": {
     "@mercadopago/sdk-react": "^1.0.6",
     "@privy-io/react-auth": "^3.7.0",
+    "@selfxyz/core": "^1.0.8",
+    "@selfxyz/qrcode": "^1.0.11",
     "clsx": "^2.1.1",
+    "ethers": "^6.15.0",
     "gsap": "^3.13.0",
     "html5-qrcode": "^2.3.8",
     "next": "^14.0.0",

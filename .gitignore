@@ -27,11 +27,19 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# foundry build artifacts
+/broadcast/
+/cache/
+/out/
+
+# Vendor libraries (forge installs), not tracked
+/lib/self/
+/lib/forge-std/
+
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-
