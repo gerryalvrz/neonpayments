@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
 import { GoArrowUpRight } from 'react-icons/go';
 import { ThemeToggle } from '@/components/UI/ThemeToggle';
+import { useApp } from '@/context/AppContext';
 
 type CardNavLink = {
   label: string;
@@ -44,6 +45,7 @@ const CardNav: React.FC<CardNavProps> = ({
 }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { wallet } = useApp();
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const navRef = useRef<HTMLDivElement | null>(null);
@@ -214,15 +216,17 @@ const CardNav: React.FC<CardNavProps> = ({
     }
   };
 
-  const handleGetStarted = () => {
-    router.push('/auth');
-    // Close menu if open
-    if (isExpanded) {
-      setIsHamburgerOpen(false);
-      const tl = tlRef.current;
-      if (tl) {
-        tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
-        tl.reverse();
+  const handleGetStarted = async () => {
+    try {
+      await wallet.connect();
+    } finally {
+      if (isExpanded) {
+        setIsHamburgerOpen(false);
+        const tl = tlRef.current;
+        if (tl) {
+          tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
+          tl.reverse();
+        }
       }
     }
   };
@@ -282,14 +286,16 @@ const CardNav: React.FC<CardNavProps> = ({
 
           <div className="hidden md:flex items-center gap-2">
             <ThemeToggle size="sm" />
-            <button
-              type="button"
-              className="card-nav-cta-button inline-flex border-0 rounded-[calc(0.75rem-0.2rem)] px-4 items-center h-full font-medium cursor-pointer transition-colors duration-300 hover:opacity-90"
-              style={{ backgroundColor: finalButtonBgColor, color: finalButtonTextColor }}
-              onClick={handleGetStarted}
-            >
-              Get Started
-            </button>
+            {!wallet.isConnected && (
+              <button
+                type="button"
+                className="card-nav-cta-button inline-flex border-0 rounded-[calc(0.75rem-0.2rem)] px-4 items-center h-full font-medium cursor-pointer transition-colors duration-300 hover:opacity-90"
+                style={{ backgroundColor: finalButtonBgColor, color: finalButtonTextColor }}
+                onClick={handleGetStarted}
+              >
+                Get Started
+              </button>
+            )}
           </div>
           <div className="md:hidden">
             <ThemeToggle size="sm" />

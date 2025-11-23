@@ -30,7 +30,7 @@ type Method = 'address' | 'qr';
 
 export function SendScreen() {
   const router = useRouter();
-  const { user, walletBalance, setWalletBalance, addTransaction, language } = useApp();
+  const { user, walletBalance, setWalletBalance, addTransaction, language, wallet } = useApp();
   const { showToast } = useToast();
   const [step, setStep] = useState<Step>('method');
   const [method, setMethod] = useState<Method>('address');
@@ -232,44 +232,41 @@ export function SendScreen() {
     }
 
     setStep('processing');
-    
-    // Simulate transaction
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      setProgress(i);
+    try {
+      const tokenAddress = token === 'cUSD'
+        ? '0x765DE816845861e75A25fCA122bb6898B8B1282a'
+        : token === 'USDC'
+        ? '0xcebA9300f2b948710d2653dD7B07f33A8B32118C'
+        : '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e';
+      const info = await wallet.getTokenBalance(tokenAddress);
+      const dec = info.decimals;
+      const amtAtomic = BigInt(Math.round(parseFloat(amount) * Math.pow(10, dec)));
+      const txHash = await wallet.sendToken(tokenAddress, finalAddress, amtAtomic);
+      for (let i = 0; i <= 100; i += 20) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setProgress(i);
+      }
+      const tx = {
+        id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: 'send' as const,
+        status: 'completed' as const,
+        fromToken: token,
+        toToken: token,
+        fromAmount: parseFloat(amount),
+        toAmount: parseFloat(amount),
+        fromAddress: user?.walletAddress,
+        toAddress: finalAddress,
+        timestamp: Date.now(),
+        fee: 0,
+        hash: txHash,
+      };
+      addTransaction(tx);
+      showToast({ type: 'success', message: t.success });
+      setStep('success');
+    } catch (e: any) {
+      showToast({ type: 'error', message: e?.message || 'Transaction failed' });
+      setStep('confirm');
     }
-
-    // Update wallet balance
-    const numAmount = parseFloat(amount);
-    setWalletBalance({
-      ...walletBalance,
-      [token === 'cUSD' ? 'cUSD' : token === 'USDC' ? 'USDC' : 'USDT']:
-        walletBalance[token === 'cUSD' ? 'cUSD' : token === 'USDC' ? 'USDC' : 'USDT'] - numAmount,
-    });
-
-    // Add transaction to history
-    const transaction = {
-      id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      type: 'send' as const,
-      status: 'completed' as const,
-      fromToken: token,
-      toToken: token,
-      fromAmount: numAmount,
-      toAmount: numAmount,
-      fromAddress: user?.walletAddress,
-      toAddress: finalAddress,
-      timestamp: Date.now(),
-      fee: numAmount * 0.001,
-      hash: `0x${Math.random().toString(16).substr(2, 64)}`,
-    };
-    addTransaction(transaction);
-
-    showToast({
-      type: 'success',
-      message: t.success,
-    });
-
-    setStep('success');
   };
 
   const handleContinue = () => {

@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/UI/Card';
 import { Badge } from '@/components/UI/Badge';
-import { Icon, CopyIcon, CheckIcon, LanguageIcon } from '@/components/Icons';
+import { Icon, CopyIcon, CheckIcon, LanguageIcon, XIcon } from '@/components/Icons';
 import { Button } from '@/components/UI/Button';
 import { ThemeToggle } from '@/components/UI/ThemeToggle';
 
 export function Header() {
-  const { user, walletBalance, language, setLanguage } = useApp();
+  const router = useRouter();
+  const { user, walletBalance, language, setLanguage, wallet, setUser } = useApp();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -22,6 +24,15 @@ export function Header() {
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'es' : 'en');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await wallet.disconnect();
+    } finally {
+      setUser(null);
+      router.push('/');
+    }
   };
 
   if (!user) return null;
@@ -77,6 +88,19 @@ export function Header() {
             </Icon>
             {language.toUpperCase()}
           </Button>
+          {!wallet.isMiniPay && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={handleLogout}
+              aria-label="Logout"
+            >
+              <Icon>
+                <XIcon />
+              </Icon>
+              {language === 'es' ? 'Cerrar Sesión' : 'Logout'}
+            </Button>
+          )}
         </div>
       </div>
     </Card>

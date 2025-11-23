@@ -77,10 +77,27 @@ export function VerifySelf() {
   const handleSuccessfulVerification = () => {
     setSelfVerification({ verified: true });
     if (user) setUser({ ...user, selfVerified: true });
+    try {
+      const id = (user?.id || user?.walletAddress || '').toString();
+      if (id) localStorage.setItem(`self_verified:${id}`, 'true');
+    } catch {}
     setStep('success');
   };
 
-  const handleError = () => {
+  const handleError = (err: any) => {
+    console.log("error in errro",err)
+    const code = err?.error_code || err?.code;
+    const reason = err?.reason || err?.message || '';
+    if (String(code) === 'AlreadyVerified' || String(reason).includes('AlreadyVerified')) {
+      setSelfVerification({ verified: true });
+      if (user) setUser({ ...user, selfVerified: true });
+      try {
+        const id = (user?.id || user?.walletAddress || '').toString();
+        if (id) localStorage.setItem(`self_verified:${id}`, 'true');
+      } catch {}
+      setStep('success');
+      return;
+    }
     setStep('intro');
   };
 
@@ -113,7 +130,6 @@ export function VerifySelf() {
                 onSuccess={handleSuccessfulVerification}
                 onError={handleError}
                 type="deeplink"
-                websocketUrl="wss://websocket.staging.self.xyz"
               />
             </div>
           )}

@@ -12,6 +12,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { getWalletProvider, getProviderByType } from './providers';
 import { getEnvironment } from './detection';
 import type { WalletProvider, WalletAccount, WalletState, TransactionRequest } from './types';
+import { JsonRpcProvider, Contract } from 'ethers';
+import { ERC20_ABI, encodeTransfer } from './erc20';
 import { PrivyProvider as PrivyProviderClass } from './providers/privy';
 
 export function useWallet() {
@@ -177,6 +179,29 @@ export function useWallet() {
     return await provider.getAddress();
   }, [provider]);
 
+  const getRpc = useCallback(() => {
+    const cid = state.account?.chainId || 42220;
+    if (cid === 42220) return process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org';
+    return process.env.NEXT_PUBLIC_RPC_URL || 'https://forno.celo.org';
+  }, [state.account?.chainId]);
+
+  const getTokenBalance = useCallback(async (tokenAddress: string, address?: string) => {
+    const addr = address || state.account?.address;
+    if (!addr) throw new Error('address_required');
+    const providerRpc = new JsonRpcProvider(getRpc());
+    const erc = new Contract(tokenAddress, ERC20_ABI, providerRpc);
+    const [bal, dec, sym] = await Promise.all([erc.balanceOf(addr), erc.decimals(), erc.symbol()]);
+    return { balance: BigInt(bal.toString()), decimals: Number(dec), symbol: String(sym) };
+  }, [state.account?.address, getRpc]);
+
+  const sendToken = useCallback(async (tokenAddress: string, to: string, amountAtomic: bigint, gasLimit?: string, gasPrice?: string) => {
+    if (!provider) throw new Error('No wallet provider available');
+    if (!state.account) throw new Error('Wallet not connected');
+    const data = encodeTransfer(to, amountAtomic);
+    const tx: TransactionRequest = { to: tokenAddress, data, value: '0x0', gasLimit, gasPrice };
+    return await provider.signTransaction(tx);
+  }, [provider, state.account]);
+
   return {
     // State
     ...state,
@@ -194,6 +219,8 @@ export function useWallet() {
     signMessage,
     getAddress,
     checkConnection,
+    getTokenBalance,
+    sendToken,
     
     // Provider
     provider,

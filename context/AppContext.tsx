@@ -144,6 +144,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [walletHook.isConnected, walletHook.address]);
 
+  useEffect(() => {
+    let active = true;
+    const loadBalances = async () => {
+      try {
+        const addr = walletHook.address;
+        if (!addr) return;
+        const tokens: { key: keyof WalletBalance; address: string }[] = [
+          { key: 'USDC', address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C' },
+          { key: 'cUSD', address: '0x765DE816845861e75A25fCA122bb6898B8B1282a' },
+          { key: 'USDT', address: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e' },
+        ];
+        const results = await Promise.all(tokens.map(t => walletHook.getTokenBalance(t.address, addr)));
+        const next: WalletBalance = { cUSD: 0, USDC: 0, USDT: 0 };
+        results.forEach((r, i) => {
+          const key = tokens[i].key;
+          const val = Number(r.balance) / Math.pow(10, r.decimals);
+          next[key] = Number.isFinite(val) ? val : 0;
+        });
+        if (active) setWalletBalance(next);
+      } catch {}
+    };
+    loadBalances();
+    const id = setInterval(loadBalances, 15000);
+    return () => { active = false; clearInterval(id); };
+  }, [walletHook.address, walletHook.isConnected, walletHook.getTokenBalance]);
+
+  useEffect(() => {
+    if (!user?.id && !user?.walletAddress) return;
+    const id = user?.id || user?.walletAddress || '';
+    const key = id ? `self_verified:${id}` : '';
+    if (!key) return;
+    try {
+      const val = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      if (val === 'true') {
+        setSelfVerification({ verified: true });
+        setUser(prev => (prev ? { ...prev, selfVerified: true } : prev));
+      }
+    } catch {}
+  }, [user?.id, user?.walletAddress]);
+
   const addTransaction = useCallback((transaction: Transaction) => {
     setTransactions(prev => [transaction, ...prev]);
   }, []);
@@ -188,6 +228,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           isMiniPay: walletHook.isMiniPay,
           connect: walletHook.connect,
           disconnect: walletHook.disconnect,
+          getTokenBalance: walletHook.getTokenBalance,
+          sendToken: walletHook.sendToken,
         },
         setUser,
         setMercadoPago,
@@ -214,5 +256,3 @@ export function useApp() {
   }
   return context;
 }
-
-

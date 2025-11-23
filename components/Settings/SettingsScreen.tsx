@@ -17,7 +17,7 @@ import { ThemeToggle } from '@/components/UI/ThemeToggle';
 
 export function SettingsScreen() {
   const router = useRouter();
-  const { user, mercadoPago, settings, updateSettings, setLanguage, language } = useApp();
+  const { user, mercadoPago, settings, updateSettings, setLanguage, language, wallet, setUser } = useApp();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences'>('profile');
 
@@ -125,10 +125,14 @@ export function SettingsScreen() {
     updateSettings({ language: lang });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm(t.logoutConfirm)) {
-      // In real app, this would clear auth state
-      router.push('/auth');
+      try {
+        await wallet.disconnect();
+      } finally {
+        setUser(null);
+        router.push('/');
+      }
     }
   };
 
