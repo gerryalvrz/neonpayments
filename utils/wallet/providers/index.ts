@@ -1,13 +1,16 @@
 /**
  * Wallet Provider Factory
- * 
- * Creates the appropriate wallet provider based on environment
+ *
+ * Creates the appropriate wallet provider based on environment + user selection
  */
 
 import { getEnvironment } from '../detection';
+import { getSelectedStandaloneProvider } from '../selection';
 import { MiniPayProvider } from './minipay';
 import { PrivyProvider } from './privy';
-import type { WalletProvider } from '../types';
+import { ThirdwebWalletProvider } from './thirdweb';
+import { WaapProvider } from './waap';
+import type { StandaloneWalletProviderType, WalletProvider } from '../types';
 
 /**
  * Get the appropriate wallet provider for the current environment
@@ -22,20 +25,28 @@ export function getWalletProvider(): WalletProvider | null {
     }
   }
 
-  // Fallback to Privy for standalone/web
-  return new PrivyProvider();
+  return getProviderByType(getSelectedStandaloneProvider());
 }
 
 /**
  * Get provider by type
  */
-export function getProviderByType(type: 'minipay' | 'privy'): WalletProvider {
+export function getProviderByType(
+  type: 'minipay' | StandaloneWalletProviderType
+): WalletProvider {
   if (type === 'minipay') {
     return new MiniPayProvider();
+  }
+  if (type === 'thirdweb') {
+    return new ThirdwebWalletProvider();
+  }
+  if (type === 'waap') {
+    return new WaapProvider();
   }
   return new PrivyProvider();
 }
 
 export { MiniPayProvider } from './minipay';
 export { PrivyProvider } from './privy';
-
+export { ThirdwebWalletProvider } from './thirdweb';
+export { WaapProvider } from './waap';

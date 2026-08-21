@@ -1,0 +1,112 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Modal } from '@/components/UI/Modal';
+import { Button } from '@/components/UI/Button';
+import {
+  STANDALONE_PROVIDERS,
+  getProviderDisplayName,
+} from '@/utils/wallet/selection';
+import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
+
+const DESCRIPTIONS: Record<StandaloneWalletProviderType, { en: string; es: string }> = {
+  privy: {
+    en: 'Email or SMS login with an embedded wallet',
+    es: 'Inicio con email o SMS y billetera integrada',
+  },
+  thirdweb: {
+    en: 'In-app wallet via thirdweb (email, phone, social)',
+    es: 'Billetera in-app con thirdweb (email, teléfono, social)',
+  },
+  waap: {
+    en: 'human.tech Wallet as a Protocol (EIP-1193)',
+    es: 'human.tech Wallet as a Protocol (EIP-1193)',
+  },
+};
+
+interface ProviderPickerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  selected: StandaloneWalletProviderType;
+  language?: 'en' | 'es';
+  connecting?: boolean;
+  onSelect: (provider: StandaloneWalletProviderType) => void | Promise<void>;
+}
+
+export function ProviderPickerModal({
+  isOpen,
+  onClose,
+  selected,
+  language = 'en',
+  connecting = false,
+  onSelect,
+}: ProviderPickerModalProps) {
+  const [pending, setPending] = useState<StandaloneWalletProviderType | null>(null);
+  const [error, setError] = useState('');
+
+  const title = language === 'es' ? 'Elige proveedor de billetera' : 'Choose wallet provider';
+  const subtitle =
+    language === 'es'
+      ? 'Puedes cambiarlo después en Configuración. Cada proveedor crea una billetera distinta.'
+      : 'You can change this later in Settings. Each provider creates a different wallet.';
+
+  const handleSelect = async (provider: StandaloneWalletProviderType) => {
+    setError('');
+    setPending(provider);
+    try {
+      await onSelect(provider);
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || (language === 'es' ? 'Error al conectar' : 'Failed to connect'));
+    } finally {
+      setPending(null);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{subtitle}</p>
+      {error && <div className="mb-3 text-sm text-semantic-error">{error}</div>}
+      <div className="space-y-2">
+        {STANDALONE_PROVIDERS.map((provider) => {
+          const active = selected === provider;
+          const loading = connecting || pending === provider;
+          return (
+            <button
+              key={provider}
+              type="button"
+              disabled={loading}
+              onClick={() => handleSelect(provider)}
+              className={`w-full text-left rounded-xl border-2 p-4 transition-colors ${
+                active
+                  ? 'border-acid-lemon bg-acid-lemon/10'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-acid-lemon/60'
+              } disabled:opacity-60`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {getProviderDisplayName(provider)}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+                    {DESCRIPTIONS[provider][language]}
+                  </p>
+                </div>
+                {active && (
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
+                    {language === 'es' ? 'Actual' : 'Current'}
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-4">
+        <Button variant="secondary" size="md" fullWidth onClick={onClose} disabled={!!pending}>
+          {language === 'es' ? 'Cancelar' : 'Cancel'}
+        </Button>
+      </div>
+    </Modal>
+  );
+}

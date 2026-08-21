@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { gsap } from 'gsap';
 import { GoArrowUpRight } from 'react-icons/go';
 import { ThemeToggle } from '@/components/UI/ThemeToggle';
 import { useApp } from '@/context/AppContext';
+import { ProviderPickerModal } from '@/components/Wallet/ProviderPickerModal';
+import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
+import { waitForWalletSession } from '@/utils/wallet/waitForSession';
 
 type CardNavLink = {
   label: string;
@@ -39,20 +42,21 @@ const CardNav: React.FC<CardNavProps> = ({
   className = '',
   ease = 'power3.out',
   baseColor,
-  menuColor,
   buttonBgColor,
   buttonTextColor
 }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { wallet } = useApp();
+  const { wallet, language, theme } = useApp();
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const navRef = useRef<HTMLDivElement | null>(null);
   const cardsRef = useRef<HTMLDivElement[]>([]);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const isExpandedRef = useRef(false);
+  isExpandedRef.current = isExpanded;
 
-  // Use current color scheme if not provided
   const [isMobile, setIsMobile] = useState(false);
   useLayoutEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -61,12 +65,21 @@ const CardNav: React.FC<CardNavProps> = ({
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
+
+  const isDark = theme === 'dark';
   const finalBaseColor = isMobile
-    ? 'rgba(17, 24, 39, 0.85)'
-    : (baseColor || 'rgba(204, 255, 0, 0.2)');
-  const finalMenuColor = menuColor || '#CCFF00'; // acid-lemon
-  const finalButtonBgColor = buttonBgColor || '#CCFF00'; // acid-lemon
-  const finalButtonTextColor = buttonTextColor || '#000'; // black for contrast
+    ? (isDark ? 'rgba(17, 24, 39, 0.92)' : 'rgba(255, 255, 255, 0.94)')
+    : (baseColor || (isDark ? 'rgba(204, 255, 0, 0.12)' : 'rgba(204, 255, 0, 0.22)'));
+  const finalButtonBgColor = buttonBgColor || '#CCFF00';
+  const finalButtonTextColor = buttonTextColor || '#000';
+
+  const menuStructureKey = useMemo(
+    () =>
+      (items || [])
+        .map((item) => `${item.label}:${(item.links || []).map((l) => `${l.label}:${l.href || ''}`).join(',')}`)
+        .join('|'),
+    [items]
+  );
 
   const calculateHeight = () => {
     const navEl = navRef.current;
@@ -125,13 +138,17 @@ const CardNav: React.FC<CardNavProps> = ({
 
   useLayoutEffect(() => {
     const tl = createTimeline();
+    if (tl && isExpandedRef.current) {
+      tl.progress(1);
+    }
     tlRef.current = tl;
 
     return () => {
       tl?.kill();
       tlRef.current = null;
     };
-  }, [ease, items]);
+    // Rebuild only when menu structure or easing changes — not on theme/color updates.
+  }, [ease, menuStructureKey]);
 
   useLayoutEffect(() => {
     const handleResize = () => {
@@ -216,18 +233,36 @@ const CardNav: React.FC<CardNavProps> = ({
     }
   };
 
+  const closeMenuIfOpen = () => {
+    if (isExpanded) {
+      setIsHamburgerOpen(false);
+      const tl = tlRef.current;
+      if (tl) {
+        tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
+        tl.reverse();
+      }
+    }
+  };
+
+  const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
+    if (provider !== wallet.selectedProvider) {
+      await wallet.setProvider(provider);
+    }
+    await waitForWalletSession(provider);
+    await wallet.connect();
+    closeMenuIfOpen();
+  };
+
   const handleGetStarted = async () => {
     try {
-      await wallet.connect();
-    } finally {
-      if (isExpanded) {
-        setIsHamburgerOpen(false);
-        const tl = tlRef.current;
-        if (tl) {
-          tl.eventCallback('onReverseComplete', () => setIsExpanded(false));
-          tl.reverse();
-        }
+      if (wallet.isMiniPay) {
+        await wallet.connect();
+        closeMenuIfOpen();
+        return;
       }
+      setPickerOpen(true);
+    } catch {
+      closeMenuIfOpen();
     }
   };
 
@@ -237,16 +272,22 @@ const CardNav: React.FC<CardNavProps> = ({
     >
       <nav
         ref={navRef}
-        className={`card-nav ${isExpanded ? 'open' : ''} block h-[60px] p-0 rounded-xl shadow-md relative overflow-hidden will-change-[height] backdrop-blur-[20px]`}
+        className={`card-nav ${isExpanded ? 'open' : ''} block h-[60px] p-0 rounded-xl shadow-md relative overflow-hidden will-change-[height] backdrop-blur-[20px] border border-gray-200/80 dark:border-acid-lemon/30`}
         style={{ backgroundColor: finalBaseColor }}
       >
         <div className="card-nav-top absolute inset-x-0 top-0 h-[60px] flex items-center justify-between p-2 pl-[1.1rem] z-[2]">
           <div
-            className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''} group h-full flex flex-col items-center justify-center cursor-pointer gap-[6px] order-2 md:order-none text-gray-900 dark:text-white md:bg-transparent md:shadow-none bg-white/90 dark:bg-gray-900/80 rounded-xl px-2 py-2 shadow-sm`}
+            className={`hamburger-menu ${isHamburgerOpen ? 'open' : ''} group h-full flex flex-col items-center justify-center cursor-pointer gap-[6px] order-3 md:order-none text-gray-900 dark:text-white rounded-xl px-2 py-2`}
             onClick={toggleMenu}
             role="button"
             aria-label={isExpanded ? 'Close menu' : 'Open menu'}
             tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleMenu();
+              }
+            }}
           >
             <div
               className={`hamburger-line w-[26px] h-[3px] bg-current transition-[transform,opacity,margin] duration-300 ease-linear [transform-origin:50%_50%] ${
@@ -297,7 +338,7 @@ const CardNav: React.FC<CardNavProps> = ({
               </button>
             )}
           </div>
-          <div className="md:hidden">
+          <div className="order-2 md:hidden">
             <ThemeToggle size="sm" />
           </div>
         </div>
@@ -339,6 +380,14 @@ const CardNav: React.FC<CardNavProps> = ({
           ))}
         </div>
       </nav>
+      <ProviderPickerModal
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        selected={wallet.selectedProvider}
+        language={language}
+        connecting={wallet.isConnecting}
+        onSelect={handleProviderSelect}
+      />
     </div>
   );
 };

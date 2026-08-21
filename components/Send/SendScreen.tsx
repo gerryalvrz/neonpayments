@@ -13,6 +13,8 @@ import { Input } from '@/components/UI/Input';
 import { Progress } from '@/components/UI/Loading';
 import { Badge } from '@/components/UI/Badge';
 import { Icon, QRIcon, MapMarkerIcon } from '@/components/Icons';
+import { parseUnits } from 'ethers';
+import { PAYMENT_SYMBOLS, getToken, type PaymentSymbol } from '@/config/tokens';
 import { resolveToAddress, isCNSName, formatAddress } from '@/utils/cns';
 
 // Dynamically import QRScanner to avoid SSR issues with html5-qrcode
@@ -38,7 +40,7 @@ export function SendScreen() {
   const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(false);
   const [amount, setAmount] = useState('');
-  const [token, setToken] = useState<'cUSD' | 'USDC' | 'USDT'>('USDC');
+  const [token, setToken] = useState<PaymentSymbol>('USDC');
   const [progress, setProgress] = useState(0);
 
   const labels = {
@@ -144,8 +146,8 @@ export function SendScreen() {
       if (amountParam) {
         setAmount(amountParam);
       }
-      if (tokenParam && ['cUSD', 'USDC', 'USDT'].includes(tokenParam)) {
-        setToken(tokenParam as 'cUSD' | 'USDC' | 'USDT');
+      if (tokenParam && (PAYMENT_SYMBOLS as readonly string[]).includes(tokenParam)) {
+        setToken(tokenParam as PaymentSymbol);
       }
 
       // Move to amount step (or confirm if amount was in QR)
@@ -153,7 +155,7 @@ export function SendScreen() {
         // Validate amount before proceeding
         const numAmount = parseFloat(amountParam);
         const selectedToken = tokenParam || token;
-        const balance = walletBalance[selectedToken === 'cUSD' ? 'cUSD' : selectedToken === 'USDC' ? 'USDC' : 'USDT'];
+        const balance = walletBalance[selectedToken] || 0;
         if (numAmount > 0 && numAmount <= balance) {
           setStep('confirm');
         } else {
@@ -214,7 +216,7 @@ export function SendScreen() {
 
   const handleAmountNext = () => {
     const numAmount = parseFloat(amount);
-    const balance = walletBalance[token === 'cUSD' ? 'cUSD' : token === 'USDC' ? 'USDC' : 'USDT'];
+    const balance = walletBalance[token] || 0;
     if (numAmount > 0 && numAmount <= balance) {
       setStep('confirm');
     }
@@ -233,14 +235,12 @@ export function SendScreen() {
 
     setStep('processing');
     try {
-      const tokenAddress = token === 'cUSD'
-        ? '0x765DE816845861e75A25fCA122bb6898B8B1282a'
-        : token === 'USDC'
-        ? '0xcebA9300f2b948710d2653dD7B07f33A8B32118C'
-        : '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e';
+      const listed = getToken(token);
+      if (!listed) throw new Error('Unknown token');
+      const tokenAddress = listed.address;
       const info = await wallet.getTokenBalance(tokenAddress);
       const dec = info.decimals;
-      const amtAtomic = BigInt(Math.round(parseFloat(amount) * Math.pow(10, dec)));
+      const amtAtomic = parseUnits(amount, dec);
       const txHash = await wallet.sendToken(tokenAddress, finalAddress, amtAtomic);
       for (let i = 0; i <= 100; i += 20) {
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -374,8 +374,8 @@ export function SendScreen() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.token}</label>
-                <div className="flex gap-2">
-                  {(['cUSD', 'USDC', 'USDT'] as const).map((tkn) => (
+                <div className="flex flex-wrap gap-2">
+                  {PAYMENT_SYMBOLS.map((tkn) => (
                     <Button
                       key={tkn}
                       variant={token === tkn ? 'primary' : 'secondary'}
@@ -397,7 +397,7 @@ export function SendScreen() {
                 step="0.01"
               />
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Available: <span className="font-bold text-gray-900 dark:text-white financial-number">{walletBalance[token === 'cUSD' ? 'cUSD' : token === 'USDC' ? 'USDC' : 'USDT'].toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> {token}
+                Available: <span className="font-bold text-gray-900 dark:text-white financial-number">{(walletBalance[token] || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> {token}
               </p>
               <Button
                 variant="primary"

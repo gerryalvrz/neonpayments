@@ -1,8 +1,7 @@
 /**
- * Privy Wallet Provider
+ * thirdweb Wallet Provider
  *
- * Adapter that consumes an InjectedWalletSession from PrivyWalletBridge.
- * No React / @privy-io imports here.
+ * Consumes InjectedWalletSession from ThirdwebWalletBridge (EIP-1193 via EIP1193.toProvider).
  */
 
 import type {
@@ -14,24 +13,22 @@ import type {
 import { getWalletSession, subscribeWalletSession } from '../session';
 
 const CELO_CHAIN_ID = 42220;
-const CELO_CHAIN_ID_HEX = '0xa4ec';
 
-export class PrivyProvider implements WalletProvider {
+export class ThirdwebWalletProvider implements WalletProvider {
   private session: InjectedWalletSession | null = null;
   private account: WalletAccount | null = null;
-  private unsubscribe: (() => void) | null = null;
 
   constructor() {
     this.session = getWalletSession();
-    this.unsubscribe = subscribeWalletSession((session) => {
-      if (session?.providerType === 'privy' || session === null) {
-        this.session = session?.providerType === 'privy' ? session : null;
+    subscribeWalletSession((session) => {
+      if (session?.providerType === 'thirdweb' || session === null) {
+        this.session = session?.providerType === 'thirdweb' ? session : null;
       }
     });
   }
 
-  getType(): 'privy' {
-    return 'privy';
+  getType(): 'thirdweb' {
+    return 'thirdweb';
   }
 
   isAvailable(): boolean {
@@ -39,14 +36,14 @@ export class PrivyProvider implements WalletProvider {
   }
 
   initialize(session: InjectedWalletSession): void {
-    if (session.providerType !== 'privy') return;
+    if (session.providerType !== 'thirdweb') return;
     this.session = session;
   }
 
   private requireSession(): InjectedWalletSession {
     const session = this.session || getWalletSession();
-    if (!session || session.providerType !== 'privy') {
-      throw new Error('Privy not initialized. Wait for PrivyWalletBridge.');
+    if (!session || session.providerType !== 'thirdweb') {
+      throw new Error('thirdweb not initialized. Wait for ThirdwebWalletBridge.');
     }
     this.session = session;
     return session;
@@ -56,14 +53,16 @@ export class PrivyProvider implements WalletProvider {
     const session = this.requireSession();
 
     if (!session.ready) {
-      throw new Error('Privy is not ready');
+      throw new Error('thirdweb is not ready');
     }
 
     if (!session.authenticated) {
       await session.login();
     }
 
-    const address = session.address;
+    // Re-read after login (bridge updates session)
+    const updated = this.session || getWalletSession();
+    const address = updated?.address;
     if (!address) {
       throw new Error('No wallet address found');
     }
@@ -71,7 +70,7 @@ export class PrivyProvider implements WalletProvider {
     this.account = {
       address,
       isConnected: true,
-      chainId: session.chainId || CELO_CHAIN_ID,
+      chainId: updated?.chainId || CELO_CHAIN_ID,
     };
 
     return this.account;
@@ -79,7 +78,7 @@ export class PrivyProvider implements WalletProvider {
 
   async disconnect(): Promise<void> {
     const session = this.session || getWalletSession();
-    if (session?.providerType === 'privy') {
+    if (session?.providerType === 'thirdweb') {
       await session.logout();
     }
     this.account = null;
@@ -87,7 +86,7 @@ export class PrivyProvider implements WalletProvider {
 
   async getAccount(): Promise<WalletAccount | null> {
     const session = this.session || getWalletSession();
-    if (!session || session.providerType !== 'privy' || !session.authenticated) {
+    if (!session || session.providerType !== 'thirdweb' || !session.authenticated) {
       this.account = null;
       return null;
     }
@@ -119,7 +118,7 @@ export class PrivyProvider implements WalletProvider {
     const session = this.requireSession();
     const provider = session.eip1193;
     if (!provider?.request) {
-      throw new Error('No EIP-1193 provider available from Privy');
+      throw new Error('No EIP-1193 provider available from thirdweb');
     }
 
     const txHash = await provider.request({
@@ -132,7 +131,6 @@ export class PrivyProvider implements WalletProvider {
           data: transaction.data || '0x',
           gas: transaction.gasLimit,
           gasPrice: transaction.gasPrice,
-          chainId: CELO_CHAIN_ID_HEX,
         },
       ],
     });
@@ -153,7 +151,7 @@ export class PrivyProvider implements WalletProvider {
 
     const provider = session.eip1193;
     if (!provider?.request) {
-      throw new Error('No sign method available from Privy');
+      throw new Error('No sign method available from thirdweb');
     }
 
     const signature = await provider.request({
@@ -170,12 +168,11 @@ export class PrivyProvider implements WalletProvider {
 
   onAccountChange(callback: (account: WalletAccount | null) => void): () => void {
     return subscribeWalletSession(async (session) => {
-      if (session?.providerType !== 'privy') {
+      if (session?.providerType !== 'thirdweb') {
         callback(null);
         return;
       }
-      const account = await this.getAccount();
-      callback(account);
+      callback(await this.getAccount());
     });
   }
 }

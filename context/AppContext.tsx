@@ -1,7 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect, useLayoutEffect } from 'react';
 import { useWallet } from '@/utils/wallet/useWallet';
+import { PAYMENT_SYMBOLS, getToken, zeroBalances } from '@/config/tokens';
+import type {
+  StandaloneWalletProviderType,
+  TransactionRequest,
+  WalletProviderType,
+} from '@/utils/wallet/types';
 import type { 
   User, 
   MercadoPagoAccount, 
@@ -33,10 +39,14 @@ interface AppContextType {
     isConnecting: boolean;
     error: string | null;
     isMiniPay: boolean;
+    provider: WalletProviderType;
+    selectedProvider: StandaloneWalletProviderType;
     connect: () => Promise<void>;
     disconnect: () => Promise<void>;
+    setProvider: (provider: StandaloneWalletProviderType) => Promise<void>;
     getTokenBalance: (tokenAddress: string, address?: string) => Promise<{ balance: bigint; decimals: number; symbol: string }>;
     sendToken: (tokenAddress: string, to: string, amountAtomic: bigint, gasLimit?: string, gasPrice?: string) => Promise<string>;
+    signTransaction: (transaction: TransactionRequest) => Promise<string>;
   };
   
   setUser: (user: User | null) => void;
@@ -63,11 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     connected: false,
     balance: 0,
   });
-  const [walletBalance, setWalletBalance] = useState<WalletBalance>({
-    cUSD: 0,
-    USDC: 0,
-    USDT: 0,
-  });
+  const [walletBalance, setWalletBalance] = useState<WalletBalance>(() => zeroBalances());
   const [selfVerification, setSelfVerification] = useState<SelfVerification>({
     verified: false,
   });
@@ -102,8 +108,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  // Apply theme to document
-  useEffect(() => {
+  // Apply theme to <html> before paint so Tailwind `dark:` classes stay in sync
+  useLayoutEffect(() => {
     const root = document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
@@ -152,15 +158,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const addr = walletHook.address;
         if (!addr) return;
-        const tokens: { key: keyof WalletBalance; address: string }[] = [
-          { key: 'USDC', address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C' },
-          { key: 'cUSD', address: '0x765DE816845861e75A25fCA122bb6898B8B1282a' },
-          { key: 'USDT', address: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e' },
-        ];
-        const results = await Promise.all(tokens.map(t => walletHook.getTokenBalance(t.address, addr)));
-        const next: WalletBalance = { cUSD: 0, USDC: 0, USDT: 0 };
+        const listed = PAYMENT_SYMBOLS.flatMap((symbol) => {
+          const token = getToken(symbol);
+          return token ? [{ key: symbol, address: token.address }] : [];
+        });
+        const results = await Promise.all(listed.map((t) => walletHook.getTokenBalance(t.address, addr)));
+        const next: WalletBalance = zeroBalances();
         results.forEach((r, i) => {
-          const key = tokens[i].key;
+          const key = listed[i].key;
           const val = Number(r.balance) / Math.pow(10, r.decimals);
           next[key] = Number.isFinite(val) ? val : 0;
         });
@@ -228,10 +233,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           isConnecting: walletHook.isConnecting,
           error: walletHook.error,
           isMiniPay: walletHook.isMiniPay,
+          provider: walletHook.provider,
+          selectedProvider: walletHook.selectedProvider,
           connect: walletHook.connect,
           disconnect: walletHook.disconnect,
+          setProvider: walletHook.setProvider,
           getTokenBalance: walletHook.getTokenBalance,
           sendToken: walletHook.sendToken,
+          signTransaction: walletHook.signTransaction,
         },
         setUser,
         setMercadoPago,

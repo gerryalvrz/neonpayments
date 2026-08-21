@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 import { AppProvider } from '@/context/AppContext';
-import { PrivyProviderWrapper } from '@/components/Wallet/PrivyProvider';
+import { WalletSdkShell } from '@/components/Wallet/WalletSdkShell';
 import { ToastProvider } from '@/components/UI/Toast';
 import './globals.css';
 
@@ -20,9 +20,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <PrivyProviderWrapper>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})();",
+          }}
+        />
+        <WalletSdkShell>
           <AppProvider>
             <ToastProvider>
               <CardNavWrapper />
@@ -31,7 +37,7 @@ export default function RootLayout({
               </main>
             </ToastProvider>
           </AppProvider>
-        </PrivyProviderWrapper>
+        </WalletSdkShell>
       </body>
     </html>
   );

@@ -12,14 +12,19 @@ import { Input } from '@/components/UI/Input';
 import { Select } from '@/components/UI/Select';
 import { Badge } from '@/components/UI/Badge';
 import { Tabs } from '@/components/UI/Tabs';
-import { Icon, SettingsIcon, UserIcon, BellIcon, ShieldIcon, CreditCardIcon, LanguageIcon } from '@/components/Icons';
+import { Icon, SettingsIcon, UserIcon, BellIcon, ShieldIcon, CreditCardIcon, LanguageIcon, WalletIcon } from '@/components/Icons';
 import { ThemeToggle } from '@/components/UI/ThemeToggle';
+import { ProviderPickerModal } from '@/components/Wallet/ProviderPickerModal';
+import { getProviderDisplayName } from '@/utils/wallet/selection';
+import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
+import { waitForWalletSession } from '@/utils/wallet/waitForSession';
 
 export function SettingsScreen() {
   const router = useRouter();
   const { user, mercadoPago, settings, updateSettings, setLanguage, language, wallet, setUser } = useApp();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'preferences'>('profile');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const labels = {
     en: {
@@ -36,6 +41,8 @@ export function SettingsScreen() {
       notVerified: 'Not Verified',
       connectedAccounts: 'Connected Accounts',
       mercadoPago: 'Mercado Pago',
+      walletProvider: 'Wallet Provider',
+      changeProvider: 'Change Provider',
       connected: 'Connected',
       notConnected: 'Not Connected',
       disconnect: 'Disconnect',
@@ -76,6 +83,8 @@ export function SettingsScreen() {
       notVerified: 'No Verificado',
       connectedAccounts: 'Cuentas Conectadas',
       mercadoPago: 'Mercado Pago',
+      walletProvider: 'Proveedor de Billetera',
+      changeProvider: 'Cambiar Proveedor',
       connected: 'Conectado',
       notConnected: 'No Conectado',
       disconnect: 'Desconectar',
@@ -134,6 +143,14 @@ export function SettingsScreen() {
         router.push('/');
       }
     }
+  };
+
+  const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
+    if (provider !== wallet.selectedProvider) {
+      await wallet.setProvider(provider);
+    }
+    await waitForWalletSession(provider);
+    await wallet.connect();
   };
 
   const toggleNotification = (key: keyof typeof settings.notifications) => {
@@ -227,6 +244,60 @@ export function SettingsScreen() {
               <Card padding="lg">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{t.connectedAccounts}</h3>
                 <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Icon color="neon" size="md">
+                        <WalletIcon />
+                      </Icon>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{t.walletProvider}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {wallet.isMiniPay
+                            ? 'MiniPay'
+                            : getProviderDisplayName(wallet.selectedProvider)}
+                          {' · '}
+                          {wallet.isConnected ? t.connected : t.notConnected}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!wallet.isMiniPay && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setPickerOpen(true)}
+                        >
+                          {t.changeProvider}
+                        </Button>
+                      )}
+                      {wallet.isConnected ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={async () => {
+                            await wallet.disconnect();
+                            setUser(null);
+                          }}
+                        >
+                          {t.disconnect}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={async () => {
+                            if (wallet.isMiniPay) {
+                              await wallet.connect();
+                            } else {
+                              setPickerOpen(true);
+                            }
+                          }}
+                        >
+                          {t.connect}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                     <div className="flex items-center gap-3">
                       <Icon color="neon" size="md">
@@ -414,6 +485,14 @@ export function SettingsScreen() {
           </Card>
         </div>
       </div>
+      <ProviderPickerModal
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        selected={wallet.selectedProvider}
+        language={language}
+        connecting={wallet.isConnecting}
+        onSelect={handleProviderSelect}
+      />
     </Container>
   );
 }

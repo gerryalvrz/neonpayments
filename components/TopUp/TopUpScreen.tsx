@@ -134,7 +134,7 @@ export function TopUpScreen() {
       // Update wallet balance
       setWalletBalance({
         ...walletBalance,
-        USDC: walletBalance.USDC + quote.to,
+        USDC: (walletBalance.USDC || 0) + quote.to,
       });
 
       // Add transaction to history
@@ -189,7 +189,7 @@ export function TopUpScreen() {
       // Update wallet balance
       setWalletBalance({
         ...walletBalance,
-        USDC: walletBalance.USDC + transakQuote.cryptoAmount,
+        USDC: (walletBalance.USDC || 0) + transakQuote.cryptoAmount,
       });
 
       // Add transaction to history

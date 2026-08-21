@@ -13,11 +13,7 @@ export interface MercadoPagoAccount {
   accountId?: string;
 }
 
-export interface WalletBalance {
-  cUSD: number;
-  USDC: number;
-  USDT: number;
-}
+export type WalletBalance = Record<string, number>;
 
 export interface SwapQuote {
   fromAmount: number;

@@ -12,15 +12,14 @@ import { Input } from '@/components/UI/Input';
 import { Select } from '@/components/UI/Select';
 import { Badge } from '@/components/UI/Badge';
 import { Icon, QRIcon, CopyIcon, CheckIcon, ArrowDownIcon } from '@/components/Icons';
+import { PAYMENT_SYMBOLS, type PaymentSymbol } from '@/config/tokens';
 import { QRCodeSVG } from 'qrcode.react';
-
-type Token = 'cUSD' | 'USDC' | 'USDT';
 
 export function ReceiveScreen() {
   const router = useRouter();
   const { user, walletBalance, language } = useApp();
   const { showToast } = useToast();
-  const [selectedToken, setSelectedToken] = useState<Token>('USDC');
+  const [selectedToken, setSelectedToken] = useState<PaymentSymbol>('USDC');
   const [amount, setAmount] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -59,11 +58,10 @@ export function ReceiveScreen() {
 
   const t = labels[language];
 
-  const tokenOptions = [
-    { value: 'cUSD', label: 'cUSD' },
-    { value: 'USDC', label: 'USDC' },
-    { value: 'USDT', label: 'USDT' },
-  ];
+  const tokenOptions = PAYMENT_SYMBOLS.map((symbol) => ({
+    value: symbol,
+    label: symbol,
+  }));
 
   const walletAddress = user?.walletAddress || '0x0000000000000000000000000000000000000000';
 
@@ -126,7 +124,7 @@ export function ReceiveScreen() {
               <Select
                 options={tokenOptions}
                 value={selectedToken}
-                onChange={(value) => setSelectedToken(value as Token)}
+                onChange={(value) => setSelectedToken(value as PaymentSymbol)}
               />
               <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 {t.balance}: {balance.toFixed(2)} {selectedToken}

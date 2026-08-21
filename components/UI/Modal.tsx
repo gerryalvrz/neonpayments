@@ -24,15 +24,17 @@ export function Modal({
   className,
 }: ModalProps) {
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = 'unset';
+      window.removeEventListener('keydown', onKey);
     };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -46,15 +48,19 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
     >
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in" />
+      <button
+        type="button"
+        aria-label="Close dialog"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in border-0 cursor-default"
+        onClick={onClose}
+      />
       <div
         className={cn(
-          'relative bg-glass-white rounded-xl border-2 border-acid-lemon shadow-neon',
+          'relative z-[201] bg-white dark:bg-gray-900 rounded-xl border-2 border-acid-lemon shadow-neon',
           'max-h-[90vh] overflow-y-auto',
           sizes[size],
           'w-full',
@@ -66,10 +72,11 @@ export function Modal({
         {(title || showCloseButton) && (
           <div className="flex items-center justify-between p-6 border-b-2 border-acid-lemon/30">
             {title && (
-              <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
             )}
             {showCloseButton && (
               <button
+                type="button"
                 onClick={onClose}
                 className="p-2 hover:bg-acid-lemon/20 rounded-lg transition-colors"
                 aria-label="Close modal"
@@ -86,4 +93,3 @@ export function Modal({
     </div>
   );
 }
-

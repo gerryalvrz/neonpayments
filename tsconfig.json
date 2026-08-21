@@ -37,6 +37,8 @@
     "context/**/*.tsx",
     "config/**/*.ts",
     "config/**/*.tsx",
+    "utils/**/*.ts",
+    "utils/**/*.tsx",
     ".next/types/**/*.ts"
   ],
   "exclude": [

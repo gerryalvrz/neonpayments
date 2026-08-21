@@ -72,7 +72,7 @@ export function Header() {
           <div className="text-right">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">Quick Balance</div>
             <div className="text-lg font-bold text-gray-900 dark:text-gray-100 financial-number">
-              {walletBalance.USDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">USDC</span>
+              {(walletBalance.USDC || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">USDC</span>
             </div>
           </div>
           <ThemeToggle size="sm" />

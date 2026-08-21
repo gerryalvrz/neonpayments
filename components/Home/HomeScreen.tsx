@@ -9,11 +9,15 @@ import { Card } from '@/components/UI/Card';
 import { Button } from '@/components/UI/Button';
 import { Badge } from '@/components/UI/Badge';
 import { Icon, CreditCardIcon, WalletIcon, SendIcon, CheckCircleIcon, ArrowDownIcon, SwapIcon, HistoryIcon, BellIcon, SettingsIcon, QRIcon } from '@/components/Icons';
+import { ProviderPickerModal } from '@/components/Wallet/ProviderPickerModal';
+import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
+import { waitForWalletSession } from '@/utils/wallet/waitForSession';
 
 export function HomeScreen() {
   const router = useRouter();
   const { user, mercadoPago, walletBalance, transactions, notifications, language, wallet } = useApp();
   const [error, setError] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const labels = {
     en: {
@@ -64,6 +68,15 @@ export function HomeScreen() {
 
   const t = labels[language];
 
+  const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
+    setError('');
+    if (provider !== wallet.selectedProvider) {
+      await wallet.setProvider(provider);
+    }
+    await waitForWalletSession(provider);
+    await wallet.connect();
+  };
+
   if (!user) {
     return (
       <Container>
@@ -75,16 +88,19 @@ export function HomeScreen() {
               <div className="mb-3 text-sm text-semantic-error">{error}</div>
             )}
             <Button
+              type="button"
               variant="primary"
               size="lg"
               fullWidth
-              onClick={async () => {
+              onClick={() => {
                 setError('');
-                try {
-                  await wallet.connect();
-                } catch (e: any) {
-                  setError(e?.message || 'Failed to connect wallet');
+                if (wallet.isMiniPay) {
+                  void wallet.connect().catch((e: any) => {
+                    setError(e?.message || 'Failed to connect wallet');
+                  });
+                  return;
                 }
+                setPickerOpen(true);
               }}
               loading={wallet.isConnecting}
               disabled={wallet.isConnecting}
@@ -96,6 +112,14 @@ export function HomeScreen() {
             </Button>
           </Card>
         </div>
+        <ProviderPickerModal
+          isOpen={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          selected={wallet.selectedProvider}
+          language={language}
+          connecting={wallet.isConnecting}
+          onSelect={handleProviderSelect}
+        />
       </Container>
     );
   }
@@ -129,16 +153,26 @@ export function HomeScreen() {
           <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
             <div>
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">cUSD</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{walletBalance.cUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{(walletBalance.cUSD || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div>
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">USDC</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{walletBalance.USDC.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{(walletBalance.USDC || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div>
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">USDT</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{walletBalance.USDT.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{(walletBalance.USDT || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4 pt-4">
+            {(['wARS', 'wBRL', 'wMXN', 'wCOP', 'wPEN', 'wCLP'] as const).map((symbol) => (
+              <div key={symbol}>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">{symbol}</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">
+                  {(walletBalance[symbol] || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            ))}
           </div>
         </Card>
 
