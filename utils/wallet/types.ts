@@ -99,6 +99,7 @@ export interface WalletProvider {
 }
 
 export interface TransactionRequest {
+  from?: string;
   to: string;
   value?: string; // in wei
   data?: string;

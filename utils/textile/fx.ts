@@ -73,24 +73,33 @@ export function isBelowTextileRfqMinimum(human: string): boolean {
   return !Number.isFinite(n) || n < TEXTILE_RFQ_MIN_WHOLE_TOKENS
 }
 
-export function rfqNoQuoteMessage(reason?: string | null, language: 'en' | 'es' = 'en'): string {
+export function rfqNoQuoteMessage(
+  reason?: string | null,
+  language: 'en' | 'es' = 'en',
+  wfiat?: TextileWfiatLeg | string | null
+): string {
+  const thinWars = wfiat === 'wARS'
   if (language === 'es') {
     switch (reason) {
       case 'no_makers_online':
-        return 'Textile aún está onboarding liquidez en este par. Prueba más tarde o el otro lado (wBRL).'
+        return thinWars
+          ? 'Textile aún está armando liquidez en wARS. Confirma de nuevo o usa wBRL.'
+          : 'Ningún maker cotizó en este segundo. Confirma de nuevo.'
       case 'no_valid_quote':
         return 'Nadie cotizó este monto ahora. RFQ no hace fills parciales.'
       default:
-        return 'Nadie cotizó este monto ahora.'
+        return 'Nadie cotizó este monto ahora. Confirma de nuevo.'
     }
   }
   switch (reason) {
     case 'no_makers_online':
-      return 'Textile is still onboarding liquidity on this pair. Try later or the other leg (wBRL).'
+      return thinWars
+        ? 'Textile is still onboarding liquidity on wARS. Confirm again or use wBRL.'
+        : 'No maker quoted this second. Confirm again.'
     case 'no_valid_quote':
       return 'Nobody quoted this size. RFQ is all-or-nothing — try another amount.'
     default:
-      return 'Nobody quoted this size right now.'
+      return 'Nobody quoted this size right now. Confirm again.'
   }
 }
 

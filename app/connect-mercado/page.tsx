@@ -74,7 +74,7 @@ export default function ConnectMercadoPage() {
             <Button variant="primary" size="lg" fullWidth onClick={startConnect} loading={loading}>Connect</Button>
           ) : (
             <div className="space-y-3">
-              <Button variant="secondary" size="lg" fullWidth onClick={() => router.push('/services')}>Continue to Services</Button>
+              <Button variant="secondary" size="lg" fullWidth onClick={() => router.push('/mercado-pago')}>Continue</Button>
               <Button variant="ghost" size="lg" fullWidth onClick={refreshToken} loading={loading}>Refresh Token</Button>
               <Button variant="danger" size="lg" fullWidth onClick={disconnect} loading={loading}>Disconnect</Button>
             </div>

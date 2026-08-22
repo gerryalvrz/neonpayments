@@ -24,6 +24,7 @@ import type {
 import { JsonRpcProvider, Contract } from 'ethers';
 import { ERC20_ABI, encodeTransfer } from './erc20';
 import { subscribeWalletSession } from './session';
+import { sendWalletTransaction } from './recoverTxHash';
 
 export function useWallet() {
   const [standaloneChoice, setStandaloneChoice] = useState<StandaloneWalletProviderType>(
@@ -199,7 +200,12 @@ export function useWallet() {
       const p = providerRef.current;
       if (!p) throw new Error('No wallet provider available');
       if (!state.account) throw new Error('Wallet not connected');
-      return await p.signTransaction(transaction);
+      return await sendWalletTransaction(() =>
+        p.signTransaction({
+          ...transaction,
+          from: transaction.from || state.account.address,
+        })
+      );
     },
     [state.account]
   );
@@ -255,13 +261,14 @@ export function useWallet() {
       if (!state.account) throw new Error('Wallet not connected');
       const data = encodeTransfer(to, amountAtomic);
       const tx: TransactionRequest = {
+        from: state.account.address,
         to: tokenAddress,
         data,
         value: '0x0',
         gasLimit,
         gasPrice,
       };
-      return await p.signTransaction(tx);
+      return await sendWalletTransaction(() => p.signTransaction(tx));
     },
     [state.account]
   );

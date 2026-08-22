@@ -12,10 +12,13 @@ import { Icon, CreditCardIcon, WalletIcon, SendIcon, CheckCircleIcon, ArrowDownI
 import { ProviderPickerModal } from '@/components/Wallet/ProviderPickerModal';
 import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
 import { waitForWalletSession } from '@/utils/wallet/waitForSession';
+import { previewFeaturesEnabled } from '@/utils/preview';
+import { useActivity } from '@/utils/useActivity';
+import { activityToTransaction } from '@/utils/activity';
 
 export function HomeScreen() {
   const router = useRouter();
-  const { user, mercadoPago, walletBalance, transactions, notifications, language, wallet } = useApp();
+  const { user, mercadoPago, walletBalance, notifications, language, wallet } = useApp();
   const [error, setError] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -67,6 +70,10 @@ export function HomeScreen() {
   };
 
   const t = labels[language];
+  const { items: activityItems } = useActivity(wallet.address);
+  const recentTransactions = activityItems.slice(0, 3).map(activityToTransaction);
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const totalBalance = (walletBalance.cUSD || 0) + (walletBalance.USDC || 0) + (walletBalance.USDT || 0);
 
   const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
     setError('');
@@ -123,11 +130,6 @@ export function HomeScreen() {
       </Container>
     );
   }
-
-  // Calculate total balance
-  const totalBalance = (walletBalance.cUSD || 0) + (walletBalance.USDC || 0) + (walletBalance.USDT || 0);
-  const recentTransactions = transactions.slice(0, 3);
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <Container>
@@ -315,6 +317,7 @@ export function HomeScreen() {
 
         {/* Additional Actions - Enhanced */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {previewFeaturesEnabled() && (
           <Card variant="interactive" padding="lg" onClick={() => router.push('/services')} className="group">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gradient-to-br from-acid-lemon/20 to-acid-lemon/10 rounded-xl group-hover:scale-110 transition-transform duration-200">
@@ -328,6 +331,7 @@ export function HomeScreen() {
               </div>
             </div>
           </Card>
+        )}
 
           {!user.selfVerified && (
             <Card variant="interactive" padding="lg" onClick={() => router.push('/verify-self')} className="group">

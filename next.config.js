@@ -116,6 +116,9 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverComponentsExternalPackages: ['postgres'],
+  },
   async headers() {
     return [
       {

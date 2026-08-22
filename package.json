@@ -19,6 +19,7 @@
     "gsap": "^3.13.0",
     "html5-qrcode": "^2.3.8",
     "next": "^14.0.0",
+    "postgres": "^3.4.9",
     "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -17,25 +17,26 @@ import { TEXTILE_FX_SWAP_URL } from '@/config/ripio';
 import {
   isBelowTextileRfqMinimum,
   isTextileQuoteTooCloseToExpiry,
+  isTextileWfiatLeg,
   resolveTextilePair,
   rfqNoQuoteMessage,
+  TEXTILE_CELO_CHAIN_ID,
+  TEXTILE_SWAP_SYMBOLS,
   TEXTILE_TOKEN_ADDRESSES,
   toAtomicAmount,
   type TextileUnsignedTx,
 } from '@/utils/textile/fx';
 import { ensureTextileAllowance, sendTextileTx } from '@/utils/textile/execute';
-import type { SwapRoute, Transaction } from '@/types';
+import { createSwapIntent, updateSwapIntent } from '@/utils/intent-logging';
+import { friendlyError } from '@/utils/errors';
+import { recoverBroadcastTxHash } from '@/utils/wallet/recoverTxHash';
+import { celoscanTxUrl } from '@/utils/explorer';
+import type { SwapRoute } from '@/types';
 
 type Step = 'input' | 'review' | 'processing' | 'success';
 
-const TOKENS = ['USDT', 'wARS', 'wBRL', 'cUSD', 'USDC'] as const;
+const TOKENS = TEXTILE_SWAP_SYMBOLS;
 type Token = (typeof TOKENS)[number];
-
-const MOCK_RATES: Record<string, Record<string, number>> = {
-  cUSD: { USDC: 1.0, USDT: 1.0 },
-  USDC: { cUSD: 1.0, USDT: 1.0 },
-  USDT: { cUSD: 1.0, USDC: 1.0 },
-};
 
 type QuotePreview = {
   live: boolean;
@@ -58,7 +59,7 @@ type SwapBuildResponse = {
 
 export function SwapScreen() {
   const router = useRouter();
-  const { walletBalance, setWalletBalance, addTransaction, language, wallet } = useApp();
+  const { walletBalance, language, wallet } = useApp();
   const { showToast } = useToast();
   const [step, setStep] = useState<Step>('input');
   const [fromToken, setFromToken] = useState<Token>('USDT');
@@ -71,11 +72,12 @@ export function SwapScreen() {
   const [progress, setProgress] = useState(0);
   const [executingLabel, setExecutingLabel] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [submitWarning, setSubmitWarning] = useState<string | null>(null);
 
   const labels = {
     en: {
       title: 'Swap Tokens',
-      subtitle: 'wARS / wBRL ↔ USDT via Textile FX. Other pairs stay indicative.',
+      subtitle: 'wARS / wBRL ↔ USDT on Celo. Other pairs are not available yet.',
       from: 'From',
       to: 'To',
       amount: 'Amount',
@@ -95,10 +97,11 @@ export function SwapScreen() {
       minSize: 'Minimum is 1 whole sell token.',
       connectWallet: 'Connect a wallet to swap on Celo.',
       external: 'Open Textile in another wallet',
+      pairUnavailable: 'This pair is not available yet.',
     },
     es: {
       title: 'Intercambiar Tokens',
-      subtitle: 'wARS / wBRL ↔ USDT vía Textile FX. Otros pares siguen indicativos.',
+      subtitle: 'wARS / wBRL ↔ USDT en Celo. Otros pares aún no están disponibles.',
       from: 'De',
       to: 'A',
       amount: 'Cantidad',
@@ -118,6 +121,7 @@ export function SwapScreen() {
       minSize: 'El mínimo es 1 token entero de venta.',
       connectWallet: 'Conecta una billetera para intercambiar en Celo.',
       external: 'Abrir Textile en otra billetera',
+      pairUnavailable: 'Este par aún no está disponible.',
     },
   };
 
@@ -131,8 +135,9 @@ export function SwapScreen() {
 
   useEffect(() => {
     if (!textilePair) {
-      if (isTextileWfiatSide(fromToken) && toToken !== 'USDT') setToToken('USDT');
-      else if (isTextileWfiatSide(toToken) && fromToken !== 'USDT') setFromToken('USDT');
+      if (!isTextileWfiatLeg(fromToken) && fromToken !== 'USDT') setFromToken('USDT');
+      else if (isTextileWfiatLeg(fromToken) && toToken !== 'USDT') setToToken('USDT');
+      else if (isTextileWfiatLeg(toToken) && fromToken !== 'USDT') setFromToken('USDT');
     }
   }, [fromToken, toToken, textilePair]);
 
@@ -147,14 +152,12 @@ export function SwapScreen() {
 
       const pair = resolveTextilePair(fromToken, toToken);
       if (!pair) {
-        const rate = MOCK_RATES[fromToken]?.[toToken];
-        if (!rate) {
-          setToAmount('');
-          return;
-        }
-        const amount = parseFloat(fromAmount);
-        const fee = amount * rate * 0.001;
-        setToAmount((amount * rate - fee).toFixed(6));
+        setToAmount('');
+        setPreview({
+          live: false,
+          buyAmount: '',
+          hint: t.pairUnavailable,
+        });
         return;
       }
 
@@ -178,6 +181,7 @@ export function SwapScreen() {
             buySymbol: toToken,
             sellAmount: fromAmount,
             address: wallet.address || undefined,
+            language,
           }),
         });
         const data = await response.json();
@@ -193,7 +197,7 @@ export function SwapScreen() {
             live: false,
             buyAmount: '',
             reason: data.reason,
-            hint: data.hint || rfqNoQuoteMessage(data.reason, language),
+            hint: data.hint || rfqNoQuoteMessage(data.reason, language, pair.wfiat),
           });
           return;
         }
@@ -227,7 +231,7 @@ export function SwapScreen() {
 
   const handleMax = () => {
     const balance = walletBalance[fromToken] || 0;
-    setFromAmount(balance.toFixed(fromToken === 'USDT' || fromToken === 'USDC' ? 2 : 2));
+    setFromAmount(balance.toFixed(2));
   };
 
   const handleContinue = () => {
@@ -247,41 +251,28 @@ export function SwapScreen() {
     if (amount <= 0) return;
 
     const pair = resolveTextilePair(fromToken, toToken);
-    if (pair) {
-      if (isBelowTextileRfqMinimum(fromAmount) || !preview?.live || !toAmount) {
-        showToast({
-          type: 'error',
-          message: preview?.hint || t.minSize,
-        });
-        return;
-      }
-      const rate = amount > 0 ? parseFloat(toAmount) / amount : 0;
-      setQuote({
-        fromToken,
-        toToken,
-        fromAmount: amount,
-        toAmount: parseFloat(toAmount),
-        rate,
-        fee: 0,
-        estimatedTime: '~30 seconds',
-        route: ['Textile FX', fromToken, toToken],
-      });
-      setStep('review');
+    if (!pair) {
+      showToast({ type: 'error', message: t.pairUnavailable });
       return;
     }
 
-    const rate = MOCK_RATES[fromToken]?.[toToken] || 1;
-    const calculated = amount * rate;
-    const fee = calculated * 0.001;
+    if (isBelowTextileRfqMinimum(fromAmount) || !preview?.live || !toAmount) {
+      showToast({
+        type: 'error',
+        message: preview?.hint || t.minSize,
+      });
+      return;
+    }
+    const rate = amount > 0 ? parseFloat(toAmount) / amount : 0;
     setQuote({
       fromToken,
       toToken,
       fromAmount: amount,
-      toAmount: calculated - fee,
+      toAmount: parseFloat(toAmount),
       rate,
-      fee,
+      fee: 0,
       estimatedTime: '~30 seconds',
-      route: [fromToken, toToken],
+      route: ['Textile FX', fromToken, toToken],
     });
     setStep('review');
   };
@@ -289,42 +280,46 @@ export function SwapScreen() {
   const handleConfirm = async () => {
     if (!quote) return;
     const pair = resolveTextilePair(quote.fromToken, quote.toToken);
-
     if (!pair) {
-      setStep('processing');
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        setProgress(i);
-      }
-      const currentFromBalance = walletBalance[quote.fromToken] || 0;
-      const currentToBalance = walletBalance[quote.toToken] || 0;
-      setWalletBalance({
-        ...walletBalance,
-        [quote.fromToken]: currentFromBalance - quote.fromAmount,
-        [quote.toToken]: currentToBalance + quote.toAmount,
-      });
-      addTransaction(mockTx(quote));
-      showToast({ type: 'success', message: t.success });
-      setStep('success');
+      showToast({ type: 'error', message: t.pairUnavailable });
       return;
     }
-
     if (!wallet.address) {
       showToast({ type: 'error', message: t.connectWallet });
       return;
     }
 
+    const intentId = crypto.randomUUID();
+    const txHashes: string[] = [];
+    let signed = false;
+    setSubmitWarning(null);
     setStep('processing');
-    setProgress(15);
-    setExecutingLabel(language === 'es' ? 'Revisando aprobación…' : 'Checking approval…');
+    setProgress(10);
+    setExecutingLabel(language === 'es' ? 'Registrando…' : 'Saving intent…');
+
     try {
-      const required = BigInt(toAtomicAmount(fromAmount, pair.sellSymbol));
-      await ensureTextileAllowance({
+      const sellAmount = toAtomicAmount(fromAmount, pair.sellSymbol);
+      await createSwapIntent({
+        intentId,
+        userAddress: wallet.address,
+        chainId: TEXTILE_CELO_CHAIN_ID,
+        sellToken: pair.sellSymbol,
+        buyToken: pair.buySymbol,
+        sellAmount,
+        venue: 'textile',
+      });
+
+      setProgress(20);
+      setExecutingLabel(language === 'es' ? 'Revisando aprobación…' : 'Checking approval…');
+      const approvalTxHash = await ensureTextileAllowance({
         owner: wallet.address,
         token: TEXTILE_TOKEN_ADDRESSES[pair.sellSymbol],
-        required,
+        required: BigInt(sellAmount),
         signTransaction: wallet.signTransaction,
       });
+      if (approvalTxHash) {
+        await updateSwapIntent(intentId, { approvalTxHash });
+      }
 
       const requestSwap = async () => {
         const response = await fetch('/api/textile/swap', {
@@ -335,23 +330,41 @@ export function SwapScreen() {
             buySymbol: pair.buySymbol,
             sellAmount: fromAmount,
             taker: wallet.address,
+            language,
           }),
         });
         const built = (await response.json()) as SwapBuildResponse;
         if (!response.ok) {
           throw new Error(built.error || built.hint || 'Could not build swap');
         }
-        if (!built.fillable || !built.transactions?.swap) {
-          throw new Error(built.hint || built.reason || rfqNoQuoteMessage(built.reason, language));
-        }
         return built;
       };
 
       setProgress(40);
       setExecutingLabel(language === 'es' ? 'Pidiendo cotización firme…' : 'Requesting firm quote…');
-      let built = await requestSwap();
+      let built: SwapBuildResponse | null = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        built = await requestSwap();
+        if (built.fillable && built.transactions?.swap) break;
+        if (attempt < 2) {
+          setExecutingLabel(
+            language === 'es' ? 'Esperando un market maker…' : 'Waiting for a maker…'
+          );
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      }
+      if (!built?.fillable || !built.transactions?.swap) {
+        throw new Error(
+          built?.hint || built?.reason || rfqNoQuoteMessage(built?.reason, language, pair.wfiat)
+        );
+      }
       if (isTextileQuoteTooCloseToExpiry(built.expiresAt)) {
         built = await requestSwap();
+      }
+      if (!built.fillable || !built.transactions?.swap) {
+        throw new Error(
+          built.hint || built.reason || rfqNoQuoteMessage(built.reason, language, pair.wfiat)
+        );
       }
       if (
         isTextileQuoteTooCloseToExpiry(built.expiresAt) ||
@@ -364,42 +377,131 @@ export function SwapScreen() {
         );
       }
 
+      const quotedAtomic = built.buyAmount
+        ? toAtomicAmount(String(built.buyAmount), pair.buySymbol)
+        : undefined;
+      await updateSwapIntent(intentId, {
+        rfqId: built.id,
+        claimToken: built.claimToken,
+        expiresAt: built.expiresAt ?? null,
+        buyAmountQuoted: quotedAtomic,
+      });
+
+      const buyToken = TEXTILE_TOKEN_ADDRESSES[pair.buySymbol];
+      let buyBefore: bigint | undefined;
+      try {
+        buyBefore = (await wallet.getTokenBalance(buyToken)).balance;
+      } catch {
+        buyBefore = undefined;
+      }
+
       setProgress(70);
       setExecutingLabel(language === 'es' ? 'Firmando el swap…' : 'Signing swap…');
-      const hash = await sendTextileTx(built.transactions!.swap!, wallet.signTransaction);
+      const hash = await sendTextileTx(
+        built.transactions!.swap!,
+        wallet.signTransaction,
+        wallet.address,
+        async (submittedHash) => {
+          signed = true;
+          txHashes.push(submittedHash);
+          await updateSwapIntent(intentId, {
+            status: 'submitted',
+            txHashes: [...txHashes],
+          });
+        }
+      );
 
+      setProgress(85);
+      setExecutingLabel(language === 'es' ? 'Reportando el swap…' : 'Reporting swap…');
+      let submitOk = false;
       if (built.id && built.claimToken) {
-        await fetch('/api/textile/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: built.id,
-            claimToken: built.claimToken,
-            txHash: hash,
-          }),
-        });
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          const submit = await fetch('/api/textile/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: built.id,
+              claimToken: built.claimToken,
+              txHash: hash,
+            }),
+          });
+          if (submit.ok) {
+            submitOk = true;
+            break;
+          }
+          if (attempt === 0 && submit.status >= 500) continue;
+          break;
+        }
       }
+
+      let buyActual = quotedAtomic;
+      try {
+        const buyAfter = (await wallet.getTokenBalance(buyToken)).balance;
+        if (buyBefore !== undefined && buyAfter > buyBefore) {
+          buyActual = (buyAfter - buyBefore).toString();
+        }
+      } catch {
+        // keep quoted amount
+      }
+
+      if (!submitOk) {
+        await updateSwapIntent(intentId, {
+          status: 'submitted',
+          txHashes,
+          submitOk: false,
+          buyAmountActual: buyActual,
+          error: 'Venue report failed after the transaction was mined',
+        });
+        setTxHash(hash);
+        setSubmitWarning(
+          language === 'es'
+            ? 'La transacción está en Celo, pero no se pudo reportar al venue. Revisa el historial.'
+            : 'The transaction is on Celo, but the venue report failed. Check history.'
+        );
+        setProgress(100);
+        setStep('success');
+        return;
+      }
+
+      await updateSwapIntent(intentId, {
+        status: 'confirmed',
+        txHashes,
+        submitOk: true,
+        buyAmountActual: buyActual,
+        error: null,
+      });
 
       setProgress(100);
       setTxHash(hash);
-      addTransaction({
-        id: `tx_${Date.now()}`,
-        type: 'swap',
-        status: 'completed',
-        fromToken: quote.fromToken,
-        toToken: quote.toToken,
-        fromAmount: quote.fromAmount,
-        toAmount: built.buyAmount ? Number(built.buyAmount) : quote.toAmount,
-        timestamp: Date.now(),
-        fee: 0,
-        hash,
-      });
       showToast({ type: 'success', message: t.success });
       setStep('success');
     } catch (err) {
+      const recovered = recoverBroadcastTxHash(err);
+      if (recovered && !txHashes.includes(recovered)) {
+        txHashes.push(recovered);
+        signed = true;
+      }
+      if (intentId) {
+        await updateSwapIntent(intentId, {
+          status: signed ? 'submitted' : 'failed',
+          txHashes: txHashes.length ? txHashes : undefined,
+          error: signed ? null : err instanceof Error ? err.message : 'Swap failed',
+        }).catch(() => undefined);
+      }
+      if (signed && txHashes[0]) {
+        setTxHash(txHashes[0]);
+        setSubmitWarning(
+          language === 'es'
+            ? 'La transacción se envió. Ábrela en el historial si esta pantalla no confirma.'
+            : 'The transaction was sent. Check history if this screen does not confirm.'
+        );
+        setProgress(100);
+        setStep('success');
+        return;
+      }
       showToast({
         type: 'error',
-        message: err instanceof Error ? err.message : 'Swap failed',
+        message: friendlyError(err, language, 'swap'),
       });
       setStep('review');
     }
@@ -577,10 +679,13 @@ export function SwapScreen() {
                   <p>
                     Swapped {quote.fromAmount.toFixed(2)} {quote.fromToken} for {quote.toAmount.toFixed(6)} {quote.toToken}
                   </p>
+                  {submitWarning && (
+                    <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">{submitWarning}</p>
+                  )}
                   {txHash && (
                     <a
                       className="mt-2 inline-block text-xs underline"
-                      href={`https://celoscan.io/tx/${txHash}`}
+                      href={celoscanTxUrl(txHash)}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -598,23 +703,4 @@ export function SwapScreen() {
       </div>
     </Container>
   );
-}
-
-function isTextileWfiatSide(symbol: string) {
-  return symbol === 'wARS' || symbol === 'wBRL';
-}
-
-function mockTx(quote: SwapRoute): Transaction {
-  return {
-    id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    type: 'swap',
-    status: 'completed',
-    fromToken: quote.fromToken,
-    toToken: quote.toToken,
-    fromAmount: quote.fromAmount,
-    toAmount: quote.toAmount,
-    timestamp: Date.now(),
-    fee: quote.fee,
-    hash: `0x${Math.random().toString(16).substr(2, 64)}`,
-  };
 }

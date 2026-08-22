@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
+import { previewFeaturesEnabled } from '@/utils/preview';
 import type { CardNavItem } from './CardNav';
 
 type CardNavLink = {
@@ -62,7 +63,9 @@ export function useNavItems(): CardNavItem[] {
       { label: t.sendMoney, href: '/send', ariaLabel: 'Send Money' },
       { label: t.addFunds, href: '/topup', ariaLabel: 'Add Funds' },
       { label: 'Mercado Pago', href: '/mercado-pago', ariaLabel: 'Mercado Pago' },
-      { label: t.payServices, href: '/services', ariaLabel: 'Pay Services' },
+      ...(previewFeaturesEnabled()
+        ? [{ label: t.payServices, href: '/services', ariaLabel: 'Pay Services' }]
+        : []),
       { label: t.swapTokens, href: '/swap', ariaLabel: 'Swap Tokens' },
     ];
 

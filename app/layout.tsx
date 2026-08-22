@@ -11,7 +11,7 @@ const CardNavWrapper = dynamic(() => import('@/components/CardNav/CardNavWrapper
 
 export const metadata: Metadata = {
   title: 'NeonPay MX - MiniPay MiniApp',
-  description: 'A MiniApp mock for MiniPay demonstrating the full UX flow',
+  description: 'MiniPay app for Celo swaps and payments',
 };
 
 export default function RootLayout({

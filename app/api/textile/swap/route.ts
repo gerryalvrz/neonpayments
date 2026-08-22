@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const buySymbol = typeof body.buySymbol === 'string' ? body.buySymbol.trim() : ''
     const sellAmount = typeof body.sellAmount === 'string' ? body.sellAmount.trim() : ''
     const taker = typeof body.taker === 'string' ? body.taker.trim() : ''
+    const language = body.language === 'es' ? 'es' : 'en'
 
     const pair = resolveTextilePair(sellSymbol, buySymbol)
     if (!pair) {
@@ -66,8 +67,8 @@ export async function POST(request: NextRequest) {
         status: built.data.status,
         reason: built.data.reason || 'no_quote',
         hint: availableSell
-          ? `${rfqNoQuoteMessage(built.data.reason)} Published depth: ~${availableSell} ${pair.sellSymbol}.`
-          : rfqNoQuoteMessage(built.data.reason),
+          ? `${rfqNoQuoteMessage(built.data.reason, language, pair.wfiat)} Published depth: ~${availableSell} ${pair.sellSymbol}.`
+          : rfqNoQuoteMessage(built.data.reason, language, pair.wfiat),
         availableSellAmount: availableSell,
       })
     }

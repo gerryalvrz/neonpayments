@@ -54,7 +54,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: data }, { status: tokenRes.status });
     }
 
-    const resp = NextResponse.redirect(`${origin}/services?connected=1`);
+    const resp = NextResponse.redirect(`${origin}/mercado-pago?connected=1`);
     resp.cookies.set('mp_connected', 'true', { httpOnly: true, sameSite: 'lax', path: '/' });
     if (data?.access_token) resp.cookies.set('mp_oauth_token', String(data.access_token), { httpOnly: true, sameSite: 'lax', path: '/' });
     if (data?.refresh_token) resp.cookies.set('mp_oauth_refresh', String(data.refresh_token), { httpOnly: true, sameSite: 'lax', path: '/' });

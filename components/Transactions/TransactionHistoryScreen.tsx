@@ -12,10 +12,14 @@ import { Modal } from '@/components/UI/Modal';
 import { Icon, HistoryIcon, ArrowUpIcon, ArrowDownIcon, SendIcon, SwapIcon, CreditCardIcon } from '@/components/Icons';
 import type { Transaction, TransactionType, TransactionStatus } from '@/types';
 import { TransactionDetails } from './TransactionDetails';
+import { useActivity } from '@/utils/useActivity';
+import { activityToTransaction } from '@/utils/activity';
 
 export function TransactionHistoryScreen() {
   const router = useRouter();
-  const { transactions, language } = useApp();
+  const { language, wallet } = useApp();
+  const { items: activityItems } = useActivity(wallet.address);
+  const transactions = activityItems.map(activityToTransaction);
   const [activeTab, setActiveTab] = useState<'all' | TransactionType>('all');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'all'>('all');

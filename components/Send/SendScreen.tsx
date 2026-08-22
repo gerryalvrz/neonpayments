@@ -16,6 +16,11 @@ import { Icon, QRIcon, MapMarkerIcon } from '@/components/Icons';
 import { parseUnits } from 'ethers';
 import { PAYMENT_SYMBOLS, getToken, type PaymentSymbol } from '@/config/tokens';
 import { resolveToAddress, isCNSName, formatAddress } from '@/utils/cns';
+import { createTransfer, updateTransfer } from '@/utils/intent-logging';
+import { friendlyError } from '@/utils/errors';
+import { waitForCeloTx } from '@/utils/textile/execute';
+import { TEXTILE_CELO_CHAIN_ID } from '@/utils/textile/fx';
+import { recoverBroadcastTxHash } from '@/utils/wallet/recoverTxHash';
 
 // Dynamically import QRScanner to avoid SSR issues with html5-qrcode
 const QRScanner = dynamic(() => import('@/components/UI/QRScanner'), {
@@ -32,7 +37,7 @@ type Method = 'address' | 'qr';
 
 export function SendScreen() {
   const router = useRouter();
-  const { user, walletBalance, setWalletBalance, addTransaction, language, wallet } = useApp();
+  const { walletBalance, language, wallet } = useApp();
   const { showToast } = useToast();
   const [step, setStep] = useState<Step>('method');
   const [method, setMethod] = useState<Method>('address');
@@ -234,37 +239,66 @@ export function SendScreen() {
     }
 
     setStep('processing');
+    const transferId = crypto.randomUUID();
+    let signed = false;
+    let sentHash: string | undefined;
     try {
+      if (!wallet.address) throw new Error('Connect a wallet to send.');
       const listed = getToken(token);
       if (!listed) throw new Error('Unknown token');
       const tokenAddress = listed.address;
       const info = await wallet.getTokenBalance(tokenAddress);
-      const dec = info.decimals;
-      const amtAtomic = parseUnits(amount, dec);
+      const amtAtomic = parseUnits(amount, info.decimals);
+
+      await createTransfer({
+        transferId,
+        senderAddress: wallet.address,
+        recipientAddress: finalAddress,
+        chainId: TEXTILE_CELO_CHAIN_ID,
+        token,
+        amount: amtAtomic.toString(),
+      });
+
+      setProgress(30);
       const txHash = await wallet.sendToken(tokenAddress, finalAddress, amtAtomic);
-      for (let i = 0; i <= 100; i += 20) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-        setProgress(i);
-      }
-      const tx = {
-        id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: 'send' as const,
-        status: 'completed' as const,
-        fromToken: token,
-        toToken: token,
-        fromAmount: parseFloat(amount),
-        toAmount: parseFloat(amount),
-        fromAddress: user?.walletAddress,
-        toAddress: finalAddress,
-        timestamp: Date.now(),
-        fee: 0,
-        hash: txHash,
-      };
-      addTransaction(tx);
+      signed = true;
+      sentHash = txHash;
+      await updateTransfer(transferId, {
+        status: 'submitted',
+        txHash,
+      });
+      setProgress(70);
+      await waitForCeloTx(txHash);
+      await updateTransfer(transferId, {
+        status: 'confirmed',
+        txHash,
+        error: null,
+      });
+      setProgress(100);
       showToast({ type: 'success', message: t.success });
       setStep('success');
-    } catch (e: any) {
-      showToast({ type: 'error', message: e?.message || 'Transaction failed' });
+    } catch (e: unknown) {
+      const recovered = recoverBroadcastTxHash(e);
+      if (recovered) {
+        signed = true;
+        sentHash = recovered;
+      }
+      if (transferId) {
+        await updateTransfer(transferId, {
+          status: signed ? 'submitted' : 'failed',
+          txHash: sentHash,
+          error: signed ? null : e instanceof Error ? e.message : 'Transaction failed',
+        }).catch(() => undefined);
+      }
+      if (signed && sentHash) {
+        showToast({ type: 'success', message: t.success });
+        setStep('success');
+        return;
+      }
+      showToast({
+        type: 'error',
+        message: friendlyError(e, language, 'send'),
+      });
       setStep('confirm');
     }
   };

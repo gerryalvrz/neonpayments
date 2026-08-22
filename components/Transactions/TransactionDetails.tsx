@@ -7,6 +7,7 @@ import { Icon, CopyIcon, CheckIcon } from '@/components/Icons';
 import { Button } from '@/components/UI/Button';
 import type { Transaction, Language } from '@/types';
 import { useState } from 'react';
+import { celoscanTxUrl } from '@/utils/explorer';
 
 interface TransactionDetailsProps {
   transaction: Transaction;
@@ -180,8 +181,7 @@ export function TransactionDetails({ transaction, language }: TransactionDetails
               size="sm"
               className="mt-2"
               onClick={() => {
-                // Mock: In real app, this would open blockchain explorer
-                window.open(`https://explorer.celo.org/tx/${transaction.hash}`, '_blank');
+                window.open(celoscanTxUrl(transaction.hash!), '_blank');
               }}
             >
               {t.viewOnExplorer}

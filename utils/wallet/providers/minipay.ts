@@ -1,40 +1,39 @@
 /**
  * MiniPay Wallet Provider
- * 
+ *
  * Integration with MiniPay wallet for miniapps
  */
 
 import type { WalletProvider, WalletAccount, TransactionRequest } from '../types';
+import { sendWalletTransaction } from '../recoverTxHash';
 
 export class MiniPayProvider implements WalletProvider {
-  private ethereum: any;
   private account: WalletAccount | null = null;
-
-  constructor() {
-    if (typeof window !== 'undefined') {
-      this.ethereum = (window as any).ethereum;
-    }
-  }
 
   getType(): 'minipay' {
     return 'minipay';
   }
 
+  private getEthereum(): any {
+    if (typeof window === 'undefined') return undefined;
+    return (window as any).ethereum;
+  }
+
   isAvailable(): boolean {
     if (typeof window === 'undefined') return false;
-    
-    const ethereum = (window as any).ethereum;
+
+    const ethereum = this.getEthereum();
     return !!(ethereum?.isMiniPay === true || (window as any).minipay || ethereum?.selectedAddress);
   }
 
   async connect(): Promise<WalletAccount> {
-    if (!this.isAvailable()) {
+    const ethereum = this.getEthereum();
+    if (!this.isAvailable() || !ethereum) {
       throw new Error('MiniPay is not available in this environment');
     }
 
     try {
-      // Request account access
-      const accounts = await this.ethereum.request({
+      const accounts = await ethereum.request({
         method: 'eth_requestAccounts',
       });
 
@@ -64,12 +63,13 @@ export class MiniPayProvider implements WalletProvider {
   }
 
   async getAccount(): Promise<WalletAccount | null> {
-    if (!this.isAvailable()) {
+    const ethereum = this.getEthereum();
+    if (!this.isAvailable() || !ethereum) {
       return null;
     }
 
     try {
-      const accounts = await this.ethereum.request({
+      const accounts = await ethereum.request({
         method: 'eth_accounts',
       });
 
@@ -98,33 +98,61 @@ export class MiniPayProvider implements WalletProvider {
     return account?.address || null;
   }
 
+  private async resolveAddress(preferred?: string): Promise<string> {
+    if (preferred) return preferred;
+    if (this.account?.address) return this.account.address;
+
+    const account = await this.getAccount();
+    if (account?.address) return account.address;
+
+    throw new Error('Wallet not connected');
+  }
+
   async signTransaction(transaction: TransactionRequest): Promise<string> {
-    if (!this.account) {
-      throw new Error('Wallet not connected');
+    const ethereum = this.getEthereum();
+    if (!ethereum) {
+      throw new Error('MiniPay is not available');
     }
 
-    try {
-      // MiniPay uses standard EIP-155 transaction format
-      const txHash = await this.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [transaction],
-      });
+    const from = await this.resolveAddress(transaction.from);
 
-      return txHash;
+    try {
+      // MiniPay requires `from` on eth_sendTransaction; omitting it yields
+      // "Invalid sender address null". It also waits internally with viem and
+      // can throw "receipt could not be found" after the tx already broadcast.
+      const tx: Record<string, string> = {
+        from,
+        to: transaction.to,
+        value: transaction.value || '0x0',
+        data: transaction.data || '0x',
+      };
+      if (transaction.gasLimit) tx.gas = transaction.gasLimit;
+      if (transaction.gasPrice) tx.gasPrice = transaction.gasPrice;
+
+      return await sendWalletTransaction(async () => {
+        const txHash = await ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [tx],
+        });
+        return String(txHash);
+      });
     } catch (error: any) {
       throw new Error(`Failed to sign transaction: ${error.message}`);
     }
   }
 
   async signMessage(message: string): Promise<string> {
-    if (!this.account) {
-      throw new Error('Wallet not connected');
+    const ethereum = this.getEthereum();
+    if (!ethereum) {
+      throw new Error('MiniPay is not available');
     }
 
+    const from = await this.resolveAddress();
+
     try {
-      const signature = await this.ethereum.request({
+      const signature = await ethereum.request({
         method: 'personal_sign',
-        params: [message, this.account.address],
+        params: [message, from],
       });
 
       return signature;
@@ -134,16 +162,16 @@ export class MiniPayProvider implements WalletProvider {
   }
 
   async getChainId(): Promise<number> {
-    if (!this.isAvailable()) {
+    const ethereum = this.getEthereum();
+    if (!ethereum) {
       throw new Error('MiniPay is not available');
     }
 
     try {
-      const chainId = await this.ethereum.request({
+      const chainId = await ethereum.request({
         method: 'eth_chainId',
       });
 
-      // Convert hex to number
       return parseInt(chainId, 16);
     } catch (error: any) {
       // Default to Celo Mainnet (42220) if chainId can't be determined
@@ -152,7 +180,8 @@ export class MiniPayProvider implements WalletProvider {
   }
 
   onAccountChange?(callback: (account: WalletAccount | null) => void): () => void {
-    if (!this.isAvailable()) {
+    const ethereum = this.getEthereum();
+    if (!ethereum?.on) {
       return () => {};
     }
 
@@ -166,11 +195,10 @@ export class MiniPayProvider implements WalletProvider {
       }
     };
 
-    this.ethereum.on('accountsChanged', handleAccountsChanged);
+    ethereum.on('accountsChanged', handleAccountsChanged);
 
-    // Return cleanup function
     return () => {
-      this.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+      ethereum.removeListener?.('accountsChanged', handleAccountsChanged);
     };
   }
 }

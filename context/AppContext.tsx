@@ -78,6 +78,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     verified: false,
   });
   const [language, setLanguage] = useState<Language>('en');
+
+  useEffect(() => {
+    if (walletHook.isMiniPay) setLanguage('es');
+  }, [walletHook.isMiniPay]);
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme') as Theme;
