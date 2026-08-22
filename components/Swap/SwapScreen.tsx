@@ -17,11 +17,10 @@ import { TEXTILE_FX_SWAP_URL } from '@/config/ripio';
 import {
   isBelowTextileRfqMinimum,
   isTextileQuoteTooCloseToExpiry,
-  isTextileWfiatLeg,
   resolveTextilePair,
   rfqNoQuoteMessage,
+  textileCounterpart,
   TEXTILE_CELO_CHAIN_ID,
-  TEXTILE_SWAP_SYMBOLS,
   TEXTILE_TOKEN_ADDRESSES,
   toAtomicAmount,
   type TextileUnsignedTx,
@@ -35,7 +34,7 @@ import type { SwapRoute } from '@/types';
 
 type Step = 'input' | 'review' | 'processing' | 'success';
 
-const TOKENS = TEXTILE_SWAP_SYMBOLS;
+const TOKENS = ['USDT', 'wBRL', 'wARS'] as const;
 type Token = (typeof TOKENS)[number];
 
 type QuotePreview = {
@@ -133,13 +132,19 @@ export function SwapScreen() {
     label: token,
   }));
 
-  useEffect(() => {
-    if (!textilePair) {
-      if (!isTextileWfiatLeg(fromToken) && fromToken !== 'USDT') setFromToken('USDT');
-      else if (isTextileWfiatLeg(fromToken) && toToken !== 'USDT') setToToken('USDT');
-      else if (isTextileWfiatLeg(toToken) && fromToken !== 'USDT') setFromToken('USDT');
+  const selectFromToken = (next: Token) => {
+    setFromToken(next);
+    if (next === toToken || !resolveTextilePair(next, toToken)) {
+      setToToken(textileCounterpart(next, toToken));
     }
-  }, [fromToken, toToken, textilePair]);
+  };
+
+  const selectToToken = (next: Token) => {
+    setToToken(next);
+    if (next === fromToken || !resolveTextilePair(fromToken, next)) {
+      setFromToken(textileCounterpart(next, fromToken));
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -173,20 +178,36 @@ export function SwapScreen() {
 
       setQuoting(true);
       try {
-        const response = await fetch('/api/textile/quote', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sellSymbol: fromToken,
-            buySymbol: toToken,
-            sellAmount: fromAmount,
-            address: wallet.address || undefined,
-            language,
-          }),
-        });
-        const data = await response.json();
+        let data: {
+          status?: string
+          buyAmount?: string
+          hint?: string
+          reason?: string
+          error?: string
+        } = {}
+        let ok = false
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          const response = await fetch('/api/textile/quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sellSymbol: fromToken,
+              buySymbol: toToken,
+              sellAmount: fromAmount,
+              address: wallet.address || undefined,
+              language,
+            }),
+          });
+          data = await response.json();
+          ok = response.ok;
+          if (cancelled) return;
+          if (ok && data.status !== 'no_quote' && data.buyAmount) break;
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+          }
+        }
         if (cancelled) return;
-        if (!response.ok) {
+        if (!ok) {
           setToAmount('');
           setPreview({ live: false, buyAmount: '', hint: data.error || t.minSize });
           return;
@@ -256,20 +277,20 @@ export function SwapScreen() {
       return;
     }
 
-    if (isBelowTextileRfqMinimum(fromAmount) || !preview?.live || !toAmount) {
+    if (isBelowTextileRfqMinimum(fromAmount)) {
       showToast({
         type: 'error',
         message: preview?.hint || t.minSize,
       });
       return;
     }
-    const rate = amount > 0 ? parseFloat(toAmount) / amount : 0;
+    const estimatedOut = parseFloat(toAmount) || 0;
     setQuote({
       fromToken,
       toToken,
       fromAmount: amount,
-      toAmount: parseFloat(toAmount),
-      rate,
+      toAmount: estimatedOut,
+      rate: amount > 0 && estimatedOut > 0 ? estimatedOut / amount : 0,
       fee: 0,
       estimatedTime: '~30 seconds',
       route: ['Textile FX', fromToken, toToken],
@@ -513,7 +534,8 @@ export function SwapScreen() {
     parseFloat(fromAmount) <= 0 ||
     parseFloat(fromAmount) > fromBalance ||
     quoting ||
-    (Boolean(resolveTextilePair(fromToken, toToken)) && !preview?.live);
+    !textilePair ||
+    isBelowTextileRfqMinimum(fromAmount);
 
   return (
     <Container>
@@ -532,9 +554,9 @@ export function SwapScreen() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.from}</label>
                 <Select
-                  options={tokenOptions.filter((opt) => opt.value !== toToken)}
+                  options={tokenOptions}
                   value={fromToken}
-                  onChange={(value) => setFromToken(value as Token)}
+                  onChange={(value) => selectFromToken(value as Token)}
                 />
                 <div className="mt-2 flex items-center justify-between">
                   <Input
@@ -574,9 +596,9 @@ export function SwapScreen() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.to}</label>
                 <Select
-                  options={tokenOptions.filter((opt) => opt.value !== fromToken)}
+                  options={tokenOptions}
                   value={toToken}
-                  onChange={(value) => setToToken(value as Token)}
+                  onChange={(value) => selectToToken(value as Token)}
                 />
                 <div className="mt-2">
                   <Input

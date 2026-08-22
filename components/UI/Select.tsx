@@ -37,7 +37,7 @@ export function Select({
   const selectRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
@@ -45,10 +45,12 @@ export function Select({
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [isOpen]);
 
@@ -78,8 +80,8 @@ export function Select({
             disabled && 'opacity-50 cursor-not-allowed'
           )}
         >
-          <span className={cn(!selectedOption && 'text-gray-400 dark:text-gray-500')}>
-            {selectedOption ? selectedOption.label : placeholder}
+          <span className={cn(!selectedOption && !value && 'text-gray-400 dark:text-gray-500')}>
+            {selectedOption ? selectedOption.label : value || placeholder}
           </span>
           <Icon
             color="gray"
@@ -91,7 +93,7 @@ export function Select({
         </button>
 
         {isOpen && (
-          <div className="absolute z-10 w-full mt-2 bg-glass-white dark:bg-gray-800/95 backdrop-blur-[20px] rounded-lg border-2 border-acid-lemon shadow-neon max-h-60 overflow-y-auto">
+          <div className="absolute z-50 w-full mt-2 bg-glass-white dark:bg-gray-800/95 backdrop-blur-[20px] rounded-lg border-2 border-acid-lemon shadow-neon max-h-72 overflow-y-auto">
             {options.map((option) => (
               <button
                 key={option.value}
@@ -104,7 +106,7 @@ export function Select({
                 }}
                 disabled={option.disabled}
                 className={cn(
-                  'w-full px-4 py-2.5 text-left text-gray-900 dark:text-gray-100 hover:bg-acid-lemon/20 dark:hover:bg-acid-lemon/30 transition-colors',
+                  'w-full px-4 py-3 text-left text-gray-900 dark:text-gray-100 hover:bg-acid-lemon/20 dark:hover:bg-acid-lemon/30 transition-colors',
                   'first:rounded-t-lg last:rounded-b-lg',
                   option.value === value && 'bg-acid-lemon/30 font-medium',
                   option.disabled && 'opacity-50 cursor-not-allowed'

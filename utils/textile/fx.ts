@@ -40,6 +40,16 @@ export function isTextileWfiatLeg(value: string): value is TextileWfiatLeg {
   return value === 'wARS' || value === 'wBRL'
 }
 
+export function textileCounterpart(
+  selected: TextileSwapSymbol,
+  other: string
+): TextileSwapSymbol {
+  if (selected === 'USDT') {
+    return isTextileWfiatLeg(other) ? other : 'wBRL'
+  }
+  return 'USDT'
+}
+
 export function resolveTextilePair(
   sellSymbol: string,
   buySymbol: string
