@@ -199,11 +199,12 @@ export function useWallet() {
     async (transaction: TransactionRequest): Promise<string> => {
       const p = providerRef.current;
       if (!p) throw new Error('No wallet provider available');
-      if (!state.account) throw new Error('Wallet not connected');
+      const account = state.account;
+      if (!account) throw new Error('Wallet not connected');
       return await sendWalletTransaction(() =>
         p.signTransaction({
           ...transaction,
-          from: transaction.from || state.account.address,
+          from: transaction.from || account.address,
         })
       );
     },
