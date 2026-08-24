@@ -52,7 +52,7 @@ function ThirdwebWalletBridge({ children }: { children: React.ReactNode }) {
       wallets: [
         inAppWallet({
           auth: {
-            options: ['email', 'phone', 'google', 'apple'],
+            options: ['email', 'phone', 'google', 'apple', 'passkey'],
           },
         }),
       ],
