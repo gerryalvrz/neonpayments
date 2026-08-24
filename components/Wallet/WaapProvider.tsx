@@ -69,10 +69,11 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
         const walletConnectProjectId =
           process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined;
 
-        const authenticationMethods: Array<'email' | 'phone' | 'social' | 'wallet'> =
-          walletConnectProjectId
-            ? ['email', 'phone', 'social', 'wallet']
-            : ['email', 'phone', 'social'];
+        const authenticationMethods: Array<
+          'email' | 'phone' | 'social' | 'biometrics' | 'wallet'
+        > = walletConnectProjectId
+          ? ['email', 'phone', 'social', 'biometrics', 'wallet']
+          : ['email', 'phone', 'social', 'biometrics'];
 
         waapSdk.initWaaP({
           useStaging: process.env.NEXT_PUBLIC_WAAP_USE_STAGING === 'true',

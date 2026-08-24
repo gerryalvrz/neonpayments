@@ -16,7 +16,7 @@ export function PrivyProviderWrapper({ children }: { children: React.ReactNode }
     <PrivyProvider
       appId={appId}
       config={{
-        loginMethods: ['email', 'sms'],
+        loginMethods: ['email', 'sms', 'passkey'],
         appearance: {
           theme: 'light',
         },
