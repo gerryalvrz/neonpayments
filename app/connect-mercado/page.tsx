@@ -57,7 +57,7 @@ export default function ConnectMercadoPage() {
       setLoading(false);
       if (res.ok) {
         setConnected(false);
-        router.push('/');
+        router.push('/home');
       }
     } catch (e: any) {
       setLoading(false);

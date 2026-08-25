@@ -219,8 +219,8 @@ const CardNav: React.FC<CardNavProps> = ({
   };
 
   const handleLogoClick = () => {
-    if (pathname !== '/') {
-      router.push('/');
+    if (pathname !== '/home') {
+      router.push('/home');
     }
     // Close menu if open
     if (isExpanded) {
@@ -251,6 +251,9 @@ const CardNav: React.FC<CardNavProps> = ({
     await waitForWalletSession(provider);
     await wallet.connect();
     closeMenuIfOpen();
+    if (pathname === '/') {
+      router.push('/home');
+    }
   };
 
   const handleGetStarted = async () => {
@@ -258,6 +261,9 @@ const CardNav: React.FC<CardNavProps> = ({
       if (wallet.isMiniPay) {
         await wallet.connect();
         closeMenuIfOpen();
+        if (pathname === '/') {
+          router.push('/home');
+        }
         return;
       }
       setPickerOpen(true);
@@ -318,7 +324,7 @@ const CardNav: React.FC<CardNavProps> = ({
               logo.startsWith('http') || logo.startsWith('/') || logo.endsWith('.svg') || logo.endsWith('.png') || logo.endsWith('.jpg') || logo.endsWith('.jpeg') ? (
                 <img src={logo} alt={logoAlt} className="logo h-[28px]" />
               ) : (
-                <span className="text-xl font-bold text-gray-900 dark:text-white">{logo}</span>
+                <span className="font-logo font-logo-neon text-[25px]">{logo}</span>
               )
             ) : (
               <div className="logo h-[28px] flex items-center">{logo}</div>
@@ -334,7 +340,7 @@ const CardNav: React.FC<CardNavProps> = ({
                 style={{ backgroundColor: finalButtonBgColor, color: finalButtonTextColor }}
                 onClick={handleGetStarted}
               >
-                Get Started
+                {language === 'es' ? 'Empieza ahora' : 'Get Started'}
               </button>
             )}
           </div>

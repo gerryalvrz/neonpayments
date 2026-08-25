@@ -304,7 +304,7 @@ export function SendScreen() {
   };
 
   const handleContinue = () => {
-    router.push('/');
+    router.push('/home');
   };
 
   return (

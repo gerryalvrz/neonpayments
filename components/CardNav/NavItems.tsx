@@ -53,7 +53,7 @@ export function useNavItems(): CardNavItem[] {
     const t = LABELS[language];
 
     const walletLinks: CardNavLink[] = [
-      { label: t.home, href: '/', ariaLabel: 'Go to Home' },
+      { label: t.home, href: '/home', ariaLabel: 'Go to Home' },
       { label: t.receive, href: '/receive', ariaLabel: 'Receive Payment' },
       { label: t.transactions, href: '/transactions', ariaLabel: 'View Transactions' },
       { label: t.activity, href: '/activity', ariaLabel: 'View Activity' },

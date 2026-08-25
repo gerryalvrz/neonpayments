@@ -24,7 +24,7 @@ export function HomeScreen() {
 
   const labels = {
     en: {
-      title: 'Welcome to NeonPay MX',
+      title: 'Welcome to NeonPay',
       subtitle: 'Your gateway to seamless payments',
       connectWallet: 'Connect Wallet',
       connectMercado: 'Connect Mercado Pago',
@@ -46,7 +46,7 @@ export function HomeScreen() {
       quickActions: 'Quick Actions',
     },
     es: {
-      title: 'Bienvenido a NeonPay MX',
+      title: 'Bienvenido a NeonPay',
       subtitle: 'Tu puerta de entrada a pagos sin problemas',
       connectWallet: 'Conectar Billetera',
       connectMercado: 'Conectar Mercado Pago',

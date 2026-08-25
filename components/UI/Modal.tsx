@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/utils/cn';
 import { Icon, XIcon } from '@/components/Icons';
 
@@ -23,6 +24,12 @@ export function Modal({
   showCloseButton = true,
   className,
 }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -36,7 +43,7 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const sizes = {
     sm: 'max-w-md',
@@ -46,50 +53,53 @@ export function Modal({
     full: 'max-w-full mx-4',
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[200] overflow-y-auto"
       role="dialog"
       aria-modal="true"
     >
       <button
         type="button"
         aria-label="Close dialog"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in border-0 cursor-default"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in border-0 cursor-default"
         onClick={onClose}
       />
-      <div
-        className={cn(
-          'relative z-[201] bg-white dark:bg-gray-900 rounded-xl border-2 border-acid-lemon shadow-neon',
-          'max-h-[90vh] overflow-y-auto',
-          sizes[size],
-          'w-full',
-          'animate-slide-up',
-          className
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 border-b-2 border-acid-lemon/30">
-            {title && (
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
-            )}
-            {showCloseButton && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-2 hover:bg-acid-lemon/20 rounded-lg transition-colors"
-                aria-label="Close modal"
-              >
-                <Icon color="gray" size="md">
-                  <XIcon />
-                </Icon>
-              </button>
-            )}
-          </div>
-        )}
-        <div className="p-6">{children}</div>
+      <div className="relative flex min-h-full items-center justify-center p-4">
+        <div
+          className={cn(
+            'relative z-[201] bg-white dark:bg-gray-900 rounded-xl border-2 border-acid-lemon shadow-neon',
+            'max-h-[min(90vh,calc(100dvh-2rem))] overflow-y-auto',
+            sizes[size],
+            'w-full',
+            'animate-slide-up',
+            className
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {(title || showCloseButton) && (
+            <div className="flex items-center justify-between p-6 border-b-2 border-acid-lemon/30">
+              {title && (
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+              )}
+              {showCloseButton && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-2 hover:bg-acid-lemon/20 rounded-lg transition-colors"
+                  aria-label="Close modal"
+                >
+                  <Icon color="gray" size="md">
+                    <XIcon />
+                  </Icon>
+                </button>
+              )}
+            </div>
+          )}
+          <div className="p-6">{children}</div>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

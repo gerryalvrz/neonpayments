@@ -662,7 +662,7 @@ export function ServicesScreen() {
                 variant="ghost"
                 size="lg"
                 fullWidth
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/home')}
               >
                 {language === 'en' ? 'Go Home' : 'Ir al Inicio'}
               </Button>

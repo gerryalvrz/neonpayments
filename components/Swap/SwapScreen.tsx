@@ -716,7 +716,7 @@ export function SwapScreen() {
                   )}
                 </div>
               )}
-              <Button variant="primary" size="lg" fullWidth onClick={() => router.push('/')}>
+              <Button variant="primary" size="lg" fullWidth onClick={() => router.push('/home')}>
                 {t.continue}
               </Button>
             </div>

@@ -8,7 +8,7 @@ export function CardNavWrapper() {
 
   return (
     <CardNav 
-      logo="NeonPay MX" 
+      logo="NeonPay" 
       items={items}
       baseColor="rgba(204, 255, 0, 0.2)"
       menuColor="#CCFF00"
@@ -17,4 +17,3 @@ export function CardNavWrapper() {
     />
   );
 }
-

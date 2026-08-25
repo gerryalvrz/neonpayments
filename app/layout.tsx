@@ -1,17 +1,47 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import { AppProvider } from '@/context/AppContext';
 import { WalletSdkShell } from '@/components/Wallet/WalletSdkShell';
 import { ToastProvider } from '@/components/UI/Toast';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+});
+
+const prophit = localFont({
+  src: './fonts/V5Prophit-Fading.ttf',
+  variable: '--font-prophit',
+  display: 'block',
+  weight: '400',
+});
+
+const retroPixel = localFont({
+  src: './fonts/RetroPixel.otf',
+  variable: '--font-retro-pixel',
+  display: 'block',
+  weight: '400',
+});
 
 const CardNavWrapper = dynamic(() => import('@/components/CardNav/CardNavWrapper').then(mod => ({ default: mod.CardNavWrapper })), {
   ssr: false,
 });
 
 export const metadata: Metadata = {
-  title: 'NeonPay MX - MiniPay MiniApp',
-  description: 'MiniPay app for Celo swaps and payments',
+  title: 'NeonPay — Send digital dollars in Mexico',
+  description:
+    'NeonPay is a payments app for Mexico and Latin America. Send, receive, and convert USDC, USDT, and cUSD on Celo.',
+  metadataBase: new URL('https://neonpay.celo.mx'),
 };
 
 export default function RootLayout({
@@ -20,7 +50,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${jetbrainsMono.variable} ${prophit.variable} ${retroPixel.variable}`}
+    >
       <body>
         <script
           dangerouslySetInnerHTML={{

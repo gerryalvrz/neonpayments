@@ -109,7 +109,7 @@ export function VerifySelf() {
   };
 
   const handleContinue = () => {
-    router.push('/');
+    router.push('/home');
   };
 
   return (
