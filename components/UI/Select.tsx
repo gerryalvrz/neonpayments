@@ -8,6 +8,7 @@ export interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
+  group?: string;
 }
 
 interface SelectProps {
@@ -94,27 +95,38 @@ export function Select({
 
         {isOpen && (
           <div className="absolute z-50 w-full mt-2 bg-glass-white dark:bg-gray-800/95 backdrop-blur-[20px] rounded-lg border-2 border-acid-lemon shadow-neon max-h-72 overflow-y-auto">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  if (!option.disabled && onChange) {
-                    onChange(option.value);
-                    setIsOpen(false);
-                  }
-                }}
-                disabled={option.disabled}
-                className={cn(
-                  'w-full px-4 py-3 text-left text-gray-900 dark:text-gray-100 hover:bg-acid-lemon/20 dark:hover:bg-acid-lemon/30 transition-colors',
-                  'first:rounded-t-lg last:rounded-b-lg',
-                  option.value === value && 'bg-acid-lemon/30 font-medium',
-                  option.disabled && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
+            {options.map((option, index) => {
+              const prevGroup = index > 0 ? options[index - 1].group : undefined;
+              const showGroup = Boolean(option.group && option.group !== prevGroup);
+              return (
+                <div key={option.value}>
+                  {showGroup && (
+                    <div className="px-4 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {option.group}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!option.disabled && onChange) {
+                        onChange(option.value);
+                        setIsOpen(false);
+                      }
+                    }}
+                    disabled={option.disabled}
+                    className={cn(
+                      'w-full px-4 py-3 text-left text-gray-900 dark:text-gray-100 hover:bg-acid-lemon/20 dark:hover:bg-acid-lemon/30 transition-colors',
+                      index === 0 && 'rounded-t-lg',
+                      index === options.length - 1 && 'rounded-b-lg',
+                      option.value === value && 'bg-acid-lemon/30 font-medium',
+                      option.disabled && 'opacity-50 cursor-not-allowed'
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -68,6 +68,7 @@ module.exports = {
         sans: ['var(--font-inter)', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
         display: ['var(--font-retro-pixel)', 'sans-serif'],
         logo: ['var(--font-retro-pixel)', 'sans-serif'],
+        prophit: ['var(--font-prophit)', 'sans-serif'],
         mono: ['var(--font-jetbrains-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {

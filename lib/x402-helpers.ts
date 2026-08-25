@@ -1,10 +1,10 @@
 import { type Address, createPublicClient, http, parseUnits } from 'viem';
 import { celo } from 'viem/chains';
-import { tokens } from '@/config/tokens';
+import { getToken } from '@/config/tokens';
 
 export type X402VerifyParams = {
   expectedRecipient: Address;
-  expectedTokenSymbol: 'cUSD' | 'X402' | 'CELO';
+  expectedTokenSymbol: 'cUSD' | 'USDm' | 'X402' | 'CELO';
   expectedAmount: string;
 };
 
@@ -15,7 +15,7 @@ export async function verifyX402Payment(paymentProof: string, params: X402Verify
     const receipt = await client.getTransactionReceipt({ hash: txHash });
     if (!receipt) return false;
 
-    const token = tokens.find(t => t.symbol === params.expectedTokenSymbol);
+    const token = getToken(params.expectedTokenSymbol);
     if (!token) return false;
 
     const amountWei = parseUnits(params.expectedAmount, token.decimals);
@@ -47,9 +47,9 @@ export async function verifyX402Payment(paymentProof: string, params: X402Verify
   }
 }
 
-export function buildX402Offer({ amount, tokenSymbol, recipient, expiresInSeconds = 900 }: { amount: string; tokenSymbol: 'cUSD' | 'X402' | 'CELO'; recipient: Address; expiresInSeconds?: number }) {
+export function buildX402Offer({ amount, tokenSymbol, recipient, expiresInSeconds = 900 }: { amount: string; tokenSymbol: 'cUSD' | 'USDm' | 'X402' | 'CELO'; recipient: Address; expiresInSeconds?: number }) {
   const now = Date.now();
-  const token = tokens.find(t => t.symbol === tokenSymbol)!;
+  const token = getToken(tokenSymbol)!;
   return {
     id: 'offer_' + now,
     network: 'celo:42220',

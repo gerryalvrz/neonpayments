@@ -201,8 +201,9 @@ export async function mockGetSwapQuote(
   // Mock exchange rate (in real app, fetch from Squid Router)
   const rates: Record<string, Record<string, number>> = {
     cUSD: { USDC: 1.0, USDT: 0.18 },
-    USDC: { cUSD: 1.0, USDT: 0.18 },
-    USDT: { cUSD: 5.5, USDC: 5.5 },
+    USDm: { USDC: 1.0, USDT: 0.18 },
+    USDC: { cUSD: 1.0, USDm: 1.0, USDT: 0.18 },
+    USDT: { cUSD: 5.5, USDm: 5.5, USDC: 5.5 },
   };
 
   const rate = rates[fromToken]?.[toToken] || 1;

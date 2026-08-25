@@ -36,6 +36,10 @@ export type TextileUnsignedTx = {
   chainId: number
 }
 
+export function isTextileSwapSymbol(value: string): value is TextileSwapSymbol {
+  return (TEXTILE_SWAP_SYMBOLS as readonly string[]).includes(value)
+}
+
 export function isTextileWfiatLeg(value: string): value is TextileWfiatLeg {
   return value === 'wARS' || value === 'wBRL'
 }

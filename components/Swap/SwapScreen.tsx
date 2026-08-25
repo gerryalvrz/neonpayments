@@ -14,9 +14,11 @@ import { Badge } from '@/components/UI/Badge';
 import { Progress } from '@/components/UI/Loading';
 import { Icon, SwapIcon, ArrowDownIcon } from '@/components/Icons';
 import { TEXTILE_FX_SWAP_URL } from '@/config/ripio';
+import { groupedPaymentOptions, MENTO_PAYMENT_SYMBOLS } from '@/config/tokens';
 import {
   isBelowTextileRfqMinimum,
   isTextileQuoteTooCloseToExpiry,
+  isTextileSwapSymbol,
   resolveTextilePair,
   rfqNoQuoteMessage,
   textileCounterpart,
@@ -34,8 +36,8 @@ import type { SwapRoute } from '@/types';
 
 type Step = 'input' | 'review' | 'processing' | 'success';
 
-const TOKENS = ['USDT', 'wBRL', 'wARS'] as const;
-type Token = (typeof TOKENS)[number];
+const SWAP_TOKENS = [...MENTO_PAYMENT_SYMBOLS, 'USDT', 'wBRL', 'wARS'] as const;
+type Token = (typeof SWAP_TOKENS)[number];
 
 type QuotePreview = {
   live: boolean;
@@ -76,7 +78,7 @@ export function SwapScreen() {
   const labels = {
     en: {
       title: 'Swap Tokens',
-      subtitle: 'wARS / wBRL ↔ USDT on Celo. Other pairs are not available yet.',
+      subtitle: 'Textile FX is live for Ripio wARS / wBRL ↔ USDT. Mento pairs are listed separately and not available yet.',
       from: 'From',
       to: 'To',
       amount: 'Amount',
@@ -100,7 +102,7 @@ export function SwapScreen() {
     },
     es: {
       title: 'Intercambiar Tokens',
-      subtitle: 'wARS / wBRL ↔ USDT en Celo. Otros pares aún no están disponibles.',
+      subtitle: 'Textile FX está activo para Ripio wARS / wBRL ↔ USDT. Los pares Mento están listados aparte y aún no están disponibles.',
       from: 'De',
       to: 'A',
       amount: 'Cantidad',
@@ -127,22 +129,23 @@ export function SwapScreen() {
   const t = labels[language];
   const textilePair = resolveTextilePair(fromToken, toToken);
 
-  const tokenOptions = TOKENS.map((token) => ({
-    value: token,
-    label: token,
-  }));
+  const tokenOptions = groupedPaymentOptions(language, SWAP_TOKENS);
 
   const selectFromToken = (next: Token) => {
     setFromToken(next);
     if (next === toToken || !resolveTextilePair(next, toToken)) {
-      setToToken(textileCounterpart(next, toToken));
+      if (isTextileSwapSymbol(next)) {
+        setToToken(textileCounterpart(next, toToken));
+      }
     }
   };
 
   const selectToToken = (next: Token) => {
     setToToken(next);
     if (next === fromToken || !resolveTextilePair(fromToken, next)) {
-      setFromToken(textileCounterpart(next, fromToken));
+      if (isTextileSwapSymbol(next)) {
+        setFromToken(textileCounterpart(next, fromToken));
+      }
     }
   };
 

@@ -14,7 +14,7 @@ import { Progress } from '@/components/UI/Loading';
 import { Badge } from '@/components/UI/Badge';
 import { Icon, QRIcon, MapMarkerIcon } from '@/components/Icons';
 import { parseUnits } from 'ethers';
-import { PAYMENT_SYMBOLS, getToken, type PaymentSymbol } from '@/config/tokens';
+import { getToken, paymentTokenGroups, resolvePaymentSymbol, type PaymentSymbol } from '@/config/tokens';
 import { resolveToAddress, isCNSName, formatAddress } from '@/utils/cns';
 import { createTransfer, updateTransfer } from '@/utils/intent-logging';
 import { friendlyError } from '@/utils/errors';
@@ -151,15 +151,16 @@ export function SendScreen() {
       if (amountParam) {
         setAmount(amountParam);
       }
-      if (tokenParam && (PAYMENT_SYMBOLS as readonly string[]).includes(tokenParam)) {
-        setToken(tokenParam as PaymentSymbol);
+      if (tokenParam) {
+        const resolved = resolvePaymentSymbol(tokenParam);
+        if (resolved) setToken(resolved);
       }
 
       // Move to amount step (or confirm if amount was in QR)
       if (amountParam) {
         // Validate amount before proceeding
         const numAmount = parseFloat(amountParam);
-        const selectedToken = tokenParam || token;
+        const selectedToken = resolvePaymentSymbol(tokenParam || token) || token;
         const balance = walletBalance[selectedToken] || 0;
         if (numAmount > 0 && numAmount <= balance) {
           setStep('confirm');
@@ -408,16 +409,25 @@ export function SendScreen() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.token}</label>
-                <div className="flex flex-wrap gap-2">
-                  {PAYMENT_SYMBOLS.map((tkn) => (
-                    <Button
-                      key={tkn}
-                      variant={token === tkn ? 'primary' : 'secondary'}
-                      size="sm"
-                      onClick={() => setToken(tkn)}
-                    >
-                      {tkn}
-                    </Button>
+                <div className="space-y-3">
+                  {paymentTokenGroups(language).map((group) => (
+                    <div key={group.id}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1.5">
+                        {group.label}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.symbols.map((tkn) => (
+                          <Button
+                            key={tkn}
+                            variant={token === tkn ? 'primary' : 'secondary'}
+                            size="sm"
+                            onClick={() => setToken(tkn)}
+                          >
+                            {tkn}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

@@ -99,6 +99,16 @@ h1, h2, h3, h4, h5, h6 {
   -moz-osx-font-smoothing: unset;
 }
 
+.font-prophit {
+  font-family: var(--font-prophit), sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  line-height: 1.15;
+  font-synthesis: none;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
 .font-logo-neon {
   color: #ccff00;
   -webkit-text-stroke: 1.5px rgba(15, 23, 42, 0.22);
@@ -206,6 +216,61 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 16px 0 rgba(204, 255, 0, 0.2);
 }
 
+/* Frozen ColorPanels glass: overlapping panes + prismatic rim. No motion. */
+.glass-prism-nav {
+  --prism-lemon: #ccff00;
+  --prism-neon: #39ff14;
+  --prism-mint: #6ef7cc;
+  --prism-lime: #adfa1e;
+  border: 1px solid transparent;
+  background-color: transparent;
+  background-image:
+    linear-gradient(39deg, rgba(204, 255, 0, 0.4) 0%, rgba(204, 255, 0, 0.2) 32%, transparent 48%),
+    linear-gradient(196deg, rgba(57, 255, 20, 0.28) 0%, rgba(57, 255, 20, 0.12) 30%, transparent 52%),
+    linear-gradient(16deg, rgba(110, 247, 204, 0.32) 0%, rgba(110, 247, 204, 0.14) 28%, transparent 46%),
+    linear-gradient(180deg, rgba(173, 250, 30, 0.2) 0%, transparent 42%),
+    linear-gradient(rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.58)),
+    conic-gradient(
+      from 180deg,
+      var(--prism-lemon),
+      var(--prism-neon),
+      var(--prism-mint),
+      var(--prism-lime),
+      var(--prism-lemon)
+    );
+  background-origin: border-box;
+  background-clip: padding-box, padding-box, padding-box, padding-box, padding-box, border-box;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow:
+    -1px 0 0 rgba(110, 247, 204, 0.35),
+    1px 0 0 rgba(204, 255, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 8px 24px rgba(204, 255, 0, 0.1);
+}
+
+.dark .glass-prism-nav {
+  background-image:
+    linear-gradient(39deg, rgba(204, 255, 0, 0.3) 0%, rgba(204, 255, 0, 0.14) 32%, transparent 48%),
+    linear-gradient(196deg, rgba(57, 255, 20, 0.22) 0%, rgba(57, 255, 20, 0.1) 30%, transparent 52%),
+    linear-gradient(16deg, rgba(110, 247, 204, 0.26) 0%, rgba(110, 247, 204, 0.12) 28%, transparent 46%),
+    linear-gradient(180deg, rgba(173, 250, 30, 0.16) 0%, transparent 42%),
+    linear-gradient(rgba(15, 23, 42, 0.64), rgba(15, 23, 42, 0.64)),
+    conic-gradient(
+      from 180deg,
+      var(--prism-lemon),
+      var(--prism-neon),
+      var(--prism-mint),
+      var(--prism-lime),
+      var(--prism-lemon)
+    );
+  box-shadow:
+    -1px 0 0 rgba(110, 247, 204, 0.4),
+    1px 0 0 rgba(204, 255, 0, 0.45),
+    inset 0 1px 0 rgba(204, 255, 0, 0.18),
+    0 8px 24px rgba(204, 255, 0, 0.16);
+}
+
 /* Financial number formatting */
 .financial-number {
   font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
@@ -259,6 +324,152 @@ h1, h2, h3, h4, h5, h6 {
   outline: 2px solid #CCFF00;
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Stacked Logos (Vengeance UI) */
+.stacked-logos {
+  --duration: 30;
+  --items: 1;
+  --lists: 5;
+  --stagger: 0;
+  --logo-width: 200px;
+  --mouse-x: 0px;
+  --mouse-y: 0px;
+}
+
+.stacked-logos:hover .stacked-logos__glow {
+  opacity: 1;
+}
+
+.stacked-logos:hover .stacked-logos__border-glow {
+  opacity: 1;
+}
+
+.stacked-logos__cell {
+  --base-delay: calc(sin((var(--index) / var(--lists)) * 45deg) * var(--stagger));
+  aspect-ratio: 1 / 1;
+}
+
+.stacked-logos__logo {
+  animation-name: stacked-logos-appear;
+  animation-duration: calc(var(--duration) * 1s);
+  animation-fill-mode: both;
+  animation-iteration-count: infinite;
+  animation-delay: calc(
+    (var(--duration) / var(--items)) * (var(--items) - var(--i)) * -1s +
+      (var(--base-delay, 0) * 1s)
+  );
+}
+
+.stacked-logos__logo--static {
+  animation: none;
+  opacity: 1;
+  filter: none;
+}
+
+@keyframes stacked-logos-appear {
+  0%,
+  100% {
+    opacity: 0;
+    filter: blur(4px);
+  }
+
+  5%,
+  20% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  25%,
+  100% {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+/* How-it-works cards: pointer-following neon halo behind the card surface */
+.card-neon-hover-wrap {
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  position: relative;
+  isolation: isolate;
+}
+
+.card-neon-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 1rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  background: radial-gradient(
+    200px circle at var(--mouse-x) var(--mouse-y),
+    rgba(229, 255, 102, 0.95) 0%,
+    rgba(204, 255, 0, 0.65) 28%,
+    rgba(173, 250, 30, 0.28) 48%,
+    transparent 68%
+  );
+  filter: blur(26px);
+}
+
+.card-neon-glow--outer {
+  inset: -10px;
+  z-index: 0;
+  background: radial-gradient(
+    320px circle at var(--mouse-x) var(--mouse-y),
+    rgba(204, 255, 0, 0.55) 0%,
+    rgba(229, 255, 102, 0.28) 38%,
+    transparent 72%
+  );
+  filter: blur(38px);
+}
+
+.card-neon-hover-wrap--active .card-neon-glow {
+  opacity: 1;
+}
+
+.card-neon-surface {
+  background: rgba(255, 255, 255, 0.92) !important;
+}
+
+.card-neon-surface--premium {
+  background: unset !important;
+}
+
+.dark .card-neon-surface {
+  background: rgba(30, 41, 59, 0.92) !important;
+}
+
+.dark .card-neon-surface--premium {
+  background: unset !important;
+}
+
+.card-neon-hover-wrap--active .card-neon-surface {
+  border-color: rgba(204, 255, 0, 0.45) !important;
+}
+
+.dark .card-neon-hover-wrap--active .card-neon-surface {
+  border-color: rgba(229, 255, 102, 0.55) !important;
+}
+
+.dark .card-neon-glow {
+  background: radial-gradient(
+    200px circle at var(--mouse-x) var(--mouse-y),
+    rgba(229, 255, 102, 1) 0%,
+    rgba(204, 255, 0, 0.72) 28%,
+    rgba(173, 250, 30, 0.32) 48%,
+    transparent 68%
+  );
+}
+
+.dark .card-neon-glow--outer {
+  background: radial-gradient(
+    320px circle at var(--mouse-x) var(--mouse-y),
+    rgba(204, 255, 0, 0.62) 0%,
+    rgba(229, 255, 102, 0.32) 38%,
+    transparent 72%
+  );
 }
 
 /* Smooth transitions */

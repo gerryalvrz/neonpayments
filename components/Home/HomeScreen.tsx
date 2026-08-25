@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Container } from '@/components/Layout/Container';
@@ -8,6 +8,7 @@ import { Header } from '@/components/Layout/Header';
 import { Card } from '@/components/UI/Card';
 import { Button } from '@/components/UI/Button';
 import { Badge } from '@/components/UI/Badge';
+import { Modal } from '@/components/UI/Modal';
 import { Icon, CreditCardIcon, WalletIcon, SendIcon, CheckCircleIcon, ArrowDownIcon, SwapIcon, HistoryIcon, BellIcon, SettingsIcon, QRIcon } from '@/components/Icons';
 import { ProviderPickerModal } from '@/components/Wallet/ProviderPickerModal';
 import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
@@ -15,12 +16,82 @@ import { waitForWalletSession } from '@/utils/wallet/waitForSession';
 import { previewFeaturesEnabled } from '@/utils/preview';
 import { useActivity } from '@/utils/useActivity';
 import { activityToTransaction } from '@/utils/activity';
+import {
+  RIPIO_PAYMENT_SYMBOLS,
+  USD_PAYMENT_SYMBOLS,
+  defaultVisiblePaymentSymbols,
+  mentoRegionGroups,
+  migrateVisiblePaymentSymbols,
+  paymentTokenGroups,
+  type PaymentSymbol,
+} from '@/config/tokens';
+import { cn } from '@/utils/cn';
+
+type DashboardTokenFamily = 'all' | 'mento' | 'ripio';
+const DASHBOARD_FAMILY_KEY = 'neonpay:dashboard-token-family';
+const DASHBOARD_VISIBLE_KEY = 'neonpay:dashboard-visible-tokens';
+
+function parseVisibleTokens(raw: string | null): PaymentSymbol[] {
+  if (!raw) return defaultVisiblePaymentSymbols();
+  try {
+    return migrateVisiblePaymentSymbols(JSON.parse(raw));
+  } catch {
+    return defaultVisiblePaymentSymbols();
+  }
+}
 
 export function HomeScreen() {
   const router = useRouter();
   const { user, mercadoPago, walletBalance, notifications, language, wallet } = useApp();
   const [error, setError] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [tokenFamily, setTokenFamily] = useState<DashboardTokenFamily>('all');
+  const [visibleTokens, setVisibleTokens] = useState<PaymentSymbol[]>(() => defaultVisiblePaymentSymbols());
+  const [pickerTokensOpen, setPickerTokensOpen] = useState(false);
+  const [draftVisible, setDraftVisible] = useState<PaymentSymbol[]>(() => defaultVisiblePaymentSymbols());
+
+  useEffect(() => {
+    try {
+      const savedFamily = localStorage.getItem(DASHBOARD_FAMILY_KEY);
+      if (savedFamily === 'all' || savedFamily === 'mento' || savedFamily === 'ripio') {
+        setTokenFamily(savedFamily);
+      }
+      setVisibleTokens(parseVisibleTokens(localStorage.getItem(DASHBOARD_VISIBLE_KEY)));
+    } catch {}
+  }, []);
+
+  const selectTokenFamily = (next: DashboardTokenFamily) => {
+    setTokenFamily(next);
+    try {
+      localStorage.setItem(DASHBOARD_FAMILY_KEY, next);
+    } catch {}
+  };
+
+  const openTokenPicker = () => {
+    setDraftVisible(visibleTokens);
+    setPickerTokensOpen(true);
+  };
+
+  const saveVisibleTokens = () => {
+    setVisibleTokens(draftVisible);
+    setPickerTokensOpen(false);
+    try {
+      localStorage.setItem(DASHBOARD_VISIBLE_KEY, JSON.stringify(draftVisible));
+    } catch {}
+  };
+
+  const toggleDraftToken = (symbol: PaymentSymbol) => {
+    setDraftVisible((prev) =>
+      prev.includes(symbol) ? prev.filter((row) => row !== symbol) : [...prev, symbol]
+    );
+  };
+
+  const setDraftGroup = (symbols: readonly string[], selected: boolean) => {
+    setDraftVisible((prev) => {
+      const without = prev.filter((symbol) => !symbols.includes(symbol));
+      return selected ? [...without, ...(symbols as PaymentSymbol[])] : without;
+    });
+  };
 
   const labels = {
     en: {
@@ -44,6 +115,19 @@ export function HomeScreen() {
       noTransactions: 'No recent transactions',
       unreadNotifications: 'unread',
       quickActions: 'Quick Actions',
+      all: 'All',
+      mento: 'Mento',
+      ripio: 'Ripio',
+      tokenFamily: 'Token family',
+      ripioBalances: 'Ripio wFIAT',
+      usdBalances: 'USD',
+      chooseTokens: 'Choose tokens',
+      chooseTokensTitle: 'Tokens to show',
+      chooseTokensHint: 'Americas is on by default. Add Europe, Africa, or Asia-Pacific if you need those balances.',
+      saveTokens: 'Save',
+      selectGroup: 'All',
+      hideGroup: 'None',
+      noTokens: 'No tokens selected for this view.',
     },
     es: {
       title: 'Bienvenido a NeonPay',
@@ -66,6 +150,19 @@ export function HomeScreen() {
       noTransactions: 'Sin transacciones recientes',
       unreadNotifications: 'sin leer',
       quickActions: 'Acciones Rápidas',
+      all: 'Todos',
+      mento: 'Mento',
+      ripio: 'Ripio',
+      tokenFamily: 'Familia de tokens',
+      ripioBalances: 'wFIAT de Ripio',
+      usdBalances: 'USD',
+      chooseTokens: 'Elegir tokens',
+      chooseTokensTitle: 'Tokens a mostrar',
+      chooseTokensHint: 'Américas está activo por defecto. Agrega Europa, África o Asia-Pacífico si necesitas esos saldos.',
+      saveTokens: 'Guardar',
+      selectGroup: 'Todos',
+      hideGroup: 'Ninguno',
+      noTokens: 'No hay tokens seleccionados para esta vista.',
     },
   };
 
@@ -73,7 +170,20 @@ export function HomeScreen() {
   const { items: activityItems } = useActivity(wallet.address);
   const recentTransactions = activityItems.slice(0, 3).map(activityToTransaction);
   const unreadCount = notifications.filter(n => !n.read).length;
-  const totalBalance = (walletBalance.cUSD || 0) + (walletBalance.USDC || 0) + (walletBalance.USDT || 0);
+  const totalBalance = (walletBalance.USDm || 0) + (walletBalance.USDC || 0) + (walletBalance.USDT || 0);
+  const visibleSet = new Set(visibleTokens);
+  const mentoRegions = mentoRegionGroups(language).map((region) => ({
+    ...region,
+    shown: region.symbols.filter((symbol) => visibleSet.has(symbol)),
+  }));
+  const shownMento = mentoRegions.flatMap((region) => region.shown);
+  const shownUsd = USD_PAYMENT_SYMBOLS.filter((symbol) => visibleSet.has(symbol));
+  const shownRipio = RIPIO_PAYMENT_SYMBOLS.filter((symbol) => visibleSet.has(symbol));
+  const familyTabs: { id: DashboardTokenFamily; label: string }[] = [
+    { id: 'all', label: t.all },
+    { id: 'mento', label: t.mento },
+    { id: 'ripio', label: t.ripio },
+  ];
 
   const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
     setError('');
@@ -152,29 +262,55 @@ export function HomeScreen() {
               </Icon>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-200/50 dark:border-gray-700/50">
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">cUSD</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{(walletBalance.cUSD || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <div className="flex flex-wrap items-center gap-3 mb-5">
+            <div
+              className="inline-flex flex-wrap rounded-full border border-gray-200/70 dark:border-gray-700/70 bg-white/60 dark:bg-gray-900/40 p-1"
+              role="tablist"
+              aria-label={t.tokenFamily}
+            >
+              {familyTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tokenFamily === tab.id}
+                  onClick={() => selectTokenFamily(tab.id)}
+                  className={cn(
+                    'px-3.5 py-1.5 text-base font-display tracking-wide rounded-full transition-all',
+                    tokenFamily === tab.id
+                      ? 'bg-acid-lemon text-gray-900 shadow-acid'
+                      : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">USDC</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{(walletBalance.USDC || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">USDT</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">{(walletBalance.USDT || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={openTokenPicker}>
+              {t.chooseTokens}
+            </Button>
           </div>
-          <div className="grid grid-cols-3 gap-4 pt-4">
-            {(['wARS', 'wBRL', 'wMXN', 'wCOP', 'wPEN', 'wCLP'] as const).map((symbol) => (
-              <div key={symbol}>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 uppercase tracking-wide">{symbol}</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white financial-number">
-                  {(walletBalance[symbol] || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-            ))}
+          <div className="space-y-7 pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
+            {(tokenFamily === 'all' || tokenFamily === 'mento') &&
+              mentoRegions.map((region) => (
+                <DashboardTokenSection
+                  key={region.id}
+                  title={region.label}
+                  symbols={region.shown}
+                  walletBalance={walletBalance}
+                />
+              ))}
+            {(tokenFamily === 'all' || tokenFamily === 'mento') && (
+              <DashboardTokenSection title={t.usdBalances} symbols={shownUsd} walletBalance={walletBalance} />
+            )}
+            {(tokenFamily === 'all' || tokenFamily === 'ripio') && (
+              <DashboardTokenSection title={t.ripioBalances} symbols={shownRipio} walletBalance={walletBalance} />
+            )}
+            {((tokenFamily === 'all' && !shownMento.length && !shownUsd.length && !shownRipio.length) ||
+              (tokenFamily === 'mento' && !shownMento.length && !shownUsd.length) ||
+              (tokenFamily === 'ripio' && !shownRipio.length)) && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t.noTokens}</p>
+            )}
           </div>
         </Card>
 
@@ -383,6 +519,102 @@ export function HomeScreen() {
           </Card>
         </div>
       </div>
+      <Modal
+        isOpen={pickerTokensOpen}
+        onClose={() => setPickerTokensOpen(false)}
+        title={t.chooseTokensTitle}
+        size="md"
+      >
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">{t.chooseTokensHint}</p>
+        <div className="space-y-5">
+          {paymentTokenGroups(language).map((group) => {
+            const selectedCount = group.symbols.filter((symbol) => draftVisible.includes(symbol)).length;
+            return (
+              <div key={group.id}>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    {group.label}
+                    <span className="ml-2 font-medium normal-case tracking-normal">
+                      {selectedCount}/{group.symbols.length}
+                    </span>
+                  </p>
+                  <div className="flex gap-1">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setDraftGroup(group.symbols, true)}>
+                      {t.selectGroup}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setDraftGroup(group.symbols, false)}>
+                      {t.hideGroup}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {group.symbols.map((symbol) => {
+                    const checked = draftVisible.includes(symbol);
+                    return (
+                      <button
+                        key={symbol}
+                        type="button"
+                        aria-pressed={checked}
+                        onClick={() => toggleDraftToken(symbol)}
+                        className={cn(
+                          'px-3 py-1.5 rounded-full text-sm font-semibold border transition-all',
+                          checked
+                            ? 'bg-acid-lemon text-gray-900 border-acid-lemon shadow-acid'
+                            : 'bg-white/70 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                        )}
+                      >
+                        {symbol}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-6">
+          <Button type="button" variant="primary" size="lg" fullWidth onClick={saveVisibleTokens}>
+            {t.saveTokens}
+          </Button>
+        </div>
+      </Modal>
     </Container>
+  );
+}
+
+function DashboardTokenSection({
+  title,
+  symbols,
+  walletBalance,
+}: {
+  title: string;
+  symbols: readonly string[];
+  walletBalance: Record<string, number>;
+}) {
+  if (!symbols.length) return null;
+  return (
+    <div>
+      <p className="font-display text-lg sm:text-xl text-gray-900 dark:text-white mb-4 tracking-wider">
+        {title}
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-5">
+        {symbols.map((symbol) => (
+          <DashboardTokenBalance key={symbol} symbol={symbol} amount={walletBalance[symbol] || 0} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardTokenBalance({ symbol, amount }: { symbol: string; amount: number }) {
+  return (
+    <div className="min-w-0">
+      <p className="font-sans text-xs font-bold text-gray-700 dark:text-gray-300 mb-0.5 tracking-tight">
+        {symbol}
+      </p>
+      <p className="financial-number text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+        {amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </p>
+    </div>
   );
 }

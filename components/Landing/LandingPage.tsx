@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Container } from '@/components/Layout/Container';
 import { Button } from '@/components/UI/Button';
-import { Card } from '@/components/UI/Card';
+import { NeonHoverCard } from '@/components/UI/NeonHoverCard';
 import { Badge } from '@/components/UI/Badge';
 import { ProviderPickerModal } from '@/components/Wallet/ProviderPickerModal';
 import {
@@ -33,7 +33,7 @@ import {
   HeroColorPanelsRoot,
   HeroColorPanelsVisual,
 } from '@/components/Landing/hero-color-panel';
-import { LogoCarousel } from '@/components/UI/logo-carousel';
+import { PartnerStackedLogos } from '@/components/Landing/PartnerStackedLogos';
 
 const COPY = {
   en: {
@@ -46,7 +46,7 @@ const COPY = {
     heroTitle: 'Send digital dollars.',
     heroSubtitle: 'As simple as a transfer.',
     heroBody:
-      'NeonPay is a wallet for sending, receiving, and converting money on Celo. Connect once, then pay with USDC, USDT, or cUSD — no crypto expertise required.',
+      'NeonPay is a wallet for sending, receiving, and converting money on Celo. Connect once, then pay with USDC, USDT, or USDm — no crypto expertise required.',
     seeLive: 'See what’s live',
     partnersEyebrow: 'Built on Celo',
     partnersTitle: 'The stack behind NeonPay',
@@ -63,7 +63,7 @@ const COPY = {
       {
         n: '2',
         title: 'Send or receive',
-        body: 'Pay USDC, USDT, or cUSD to a wallet, a name, or a QR. Share yours to get paid.',
+        body: 'Pay USDC, USDT, or USDm to a wallet, a name, or a QR. Share yours to get paid.',
       },
       {
         n: '3',
@@ -76,7 +76,7 @@ const COPY = {
     live: [
       {
         title: 'Send',
-        body: 'USDC, USDT, and cUSD to an address, Celo Name Service, or QR.',
+        body: 'USDC, USDT, and USDm to an address, Celo Name Service, or QR.',
       },
       {
         title: 'Receive',
@@ -142,7 +142,7 @@ const COPY = {
     heroTitle: 'Envía dólares digitales.',
     heroSubtitle: 'Tan simple como una transferencia.',
     heroBody:
-      'NeonPay es una billetera para enviar, recibir y convertir dinero en Celo. Conectas una vez y pagas con USDC, USDT o cUSD — sin saber de cripto.',
+      'NeonPay es una billetera para enviar, recibir y convertir dinero en Celo. Conectas una vez y pagas con USDC, USDT o USDm — sin saber de cripto.',
     seeLive: 'Ver lo que ya funciona',
     partnersEyebrow: 'Construido sobre Celo',
     partnersTitle: 'El stack detrás de NeonPay',
@@ -159,7 +159,7 @@ const COPY = {
       {
         n: '2',
         title: 'Envía o recibe',
-        body: 'Paga USDC, USDT o cUSD a una billetera, un nombre o un QR. Comparte el tuyo para que te paguen.',
+        body: 'Paga USDC, USDT o USDm a una billetera, un nombre o un QR. Comparte el tuyo para que te paguen.',
       },
       {
         n: '3',
@@ -172,7 +172,7 @@ const COPY = {
     live: [
       {
         title: 'Enviar',
-        body: 'USDC, USDT y cUSD a una dirección, Celo Name Service o QR.',
+        body: 'USDC, USDT y USDm a una dirección, Celo Name Service o QR.',
       },
       {
         title: 'Recibir',
@@ -242,10 +242,10 @@ export function LandingPage() {
   const loggedIn = Boolean(user && wallet.isConnected);
 
   useEffect(() => {
-    if (wallet.isMiniPay) {
+    if (wallet.isMiniPay || wallet.isConnected) {
       router.replace('/home');
     }
-  }, [wallet.isMiniPay, router]);
+  }, [wallet.isMiniPay, wallet.isConnected, router]);
 
   const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
     setError('');
@@ -363,7 +363,7 @@ export function LandingPage() {
                 {t.partnersTitle}
               </h2>
             </div>
-            <LogoCarousel columnCount={3} />
+            <PartnerStackedLogos />
           </div>
         </section>
 
@@ -382,13 +382,13 @@ export function LandingPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {t.howSteps.map((step) => (
-              <Card key={step.n} padding="lg">
+              <NeonHoverCard key={step.n} padding="lg">
                 <div className="w-10 h-10 rounded-xl bg-acid-lemon text-gray-900 font-extrabold flex items-center justify-center mb-4">
                   {step.n}
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{step.title}</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{step.body}</p>
-              </Card>
+              </NeonHoverCard>
             ))}
           </div>
         </section>
@@ -407,7 +407,7 @@ export function LandingPage() {
             {t.live.map((item, i) => {
               const LiveIcon = LIVE_ICONS[i];
               return (
-                <Card key={item.title} padding="lg">
+                <NeonHoverCard key={item.title} padding="lg">
                   <div className="p-3 bg-acid-lemon/15 rounded-xl inline-flex mb-3">
                     <Icon color="neon" size="md">
                       <LiveIcon />
@@ -415,7 +415,7 @@ export function LandingPage() {
                   </div>
                   <h3 className="font-bold text-gray-900 dark:text-white mb-1">{item.title}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{item.body}</p>
-                </Card>
+                </NeonHoverCard>
               );
             })}
           </div>
@@ -435,7 +435,7 @@ export function LandingPage() {
             {t.later.map((item, i) => {
               const LaterIcon = LATER_ICONS[i];
               return (
-                <Card key={item.title} padding="lg" className="opacity-90">
+                <NeonHoverCard key={item.title} padding="lg" className="opacity-90">
                   <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl inline-flex mb-3">
                     <Icon color="gray" size="md">
                       <LaterIcon />
@@ -443,14 +443,14 @@ export function LandingPage() {
                   </div>
                   <h3 className="font-bold text-gray-900 dark:text-white mb-1">{item.title}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{item.body}</p>
-                </Card>
+                </NeonHoverCard>
               );
             })}
           </div>
         </section>
 
         <section className="pb-20">
-          <Card variant="premium" padding="xl" className="text-center max-w-2xl mx-auto">
+          <NeonHoverCard variant="premium" padding="xl" className="text-center max-w-2xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-3">
               {t.ctaTitle}
             </h2>
@@ -467,7 +467,7 @@ export function LandingPage() {
               </Icon>
               {ctaLabel}
             </Button>
-          </Card>
+          </NeonHoverCard>
         </section>
 
         <footer className="pb-12 text-center text-sm text-gray-500 dark:text-gray-400">

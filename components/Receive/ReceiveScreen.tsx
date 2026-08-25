@@ -12,7 +12,7 @@ import { Input } from '@/components/UI/Input';
 import { Select } from '@/components/UI/Select';
 import { Badge } from '@/components/UI/Badge';
 import { Icon, QRIcon, CopyIcon, CheckIcon, ArrowDownIcon } from '@/components/Icons';
-import { PAYMENT_SYMBOLS, type PaymentSymbol } from '@/config/tokens';
+import { groupedPaymentOptions, type PaymentSymbol } from '@/config/tokens';
 import { QRCodeSVG } from 'qrcode.react';
 
 export function ReceiveScreen() {
@@ -58,10 +58,7 @@ export function ReceiveScreen() {
 
   const t = labels[language];
 
-  const tokenOptions = PAYMENT_SYMBOLS.map((symbol) => ({
-    value: symbol,
-    label: symbol,
-  }));
+  const tokenOptions = groupedPaymentOptions(language);
 
   const walletAddress = user?.walletAddress || '0x0000000000000000000000000000000000000000';
 

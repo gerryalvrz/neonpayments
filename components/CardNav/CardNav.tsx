@@ -41,13 +41,12 @@ const CardNav: React.FC<CardNavProps> = ({
   items,
   className = '',
   ease = 'power3.out',
-  baseColor,
   buttonBgColor,
   buttonTextColor
 }) => {
   const router = useRouter();
   const pathname = usePathname();
-  const { wallet, language, theme } = useApp();
+  const { wallet, language } = useApp();
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -57,19 +56,6 @@ const CardNav: React.FC<CardNavProps> = ({
   const isExpandedRef = useRef(false);
   isExpandedRef.current = isExpanded;
 
-  const [isMobile, setIsMobile] = useState(false);
-  useLayoutEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    const handler = () => setIsMobile(mq.matches);
-    handler();
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-
-  const isDark = theme === 'dark';
-  const finalBaseColor = isMobile
-    ? (isDark ? 'rgba(17, 24, 39, 0.92)' : 'rgba(255, 255, 255, 0.94)')
-    : (baseColor || (isDark ? 'rgba(204, 255, 0, 0.12)' : 'rgba(204, 255, 0, 0.22)'));
   const finalButtonBgColor = buttonBgColor || '#CCFF00';
   const finalButtonTextColor = buttonTextColor || '#000';
 
@@ -251,9 +237,7 @@ const CardNav: React.FC<CardNavProps> = ({
     await waitForWalletSession(provider);
     await wallet.connect();
     closeMenuIfOpen();
-    if (pathname === '/') {
-      router.push('/home');
-    }
+    router.push('/home');
   };
 
   const handleGetStarted = async () => {
@@ -261,9 +245,7 @@ const CardNav: React.FC<CardNavProps> = ({
       if (wallet.isMiniPay) {
         await wallet.connect();
         closeMenuIfOpen();
-        if (pathname === '/') {
-          router.push('/home');
-        }
+        router.push('/home');
         return;
       }
       setPickerOpen(true);
@@ -278,8 +260,7 @@ const CardNav: React.FC<CardNavProps> = ({
     >
       <nav
         ref={navRef}
-        className={`card-nav ${isExpanded ? 'open' : ''} block h-[60px] p-0 rounded-xl shadow-md relative overflow-hidden will-change-[height] backdrop-blur-[20px] border border-gray-200/80 dark:border-acid-lemon/30`}
-        style={{ backgroundColor: finalBaseColor }}
+        className={`card-nav glass-prism-nav ${isExpanded ? 'open' : ''} block h-[60px] p-0 rounded-xl relative overflow-hidden will-change-[height]`}
       >
         <div className="card-nav-top absolute inset-x-0 top-0 h-[60px] flex items-center justify-between p-2 pl-[1.1rem] z-[2]">
           <div
