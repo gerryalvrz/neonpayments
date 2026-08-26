@@ -22,11 +22,8 @@ npm install @neonpay/wallet-embed
 From this GitHub repo (source, until npm is live):
 
 ```bash
-# clone / copy packages/wallet-embed, then:
-npm install github:gerryalvrz/neonpayments
+npm install github:CeloMX/wallet-agnostic-provider-sdk
 ```
-
-The package lives at `packages/wallet-embed`. Next.js App Router: add `transpilePackages: ['@neonpay/wallet-embed']`.
 
 Then install **only the vendor SDKs you enable**:
 
@@ -170,11 +167,13 @@ MiniPay skips the shell and talks to `window.ethereum`.
 
 ## Publish to npm
 
-From the repo root, after logging in (`npm login`) and creating the `@neonpay` org on npm if needed:
+Canonical repo: [CeloMX/wallet-agnostic-provider-sdk](https://github.com/CeloMX/wallet-agnostic-provider-sdk).
 
 ```bash
 cd packages/wallet-embed
 npm publish --access public
 ```
 
-Bump `version` in `packages/wallet-embed/package.json` for later releases.
+Or clone that repo and run `npm publish --access public` from its root.
+
+Bump `version` in `package.json` for later releases.

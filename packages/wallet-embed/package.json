@@ -6,12 +6,11 @@
   "author": "Celo MX",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gerryalvrz/neonpayments.git",
-    "directory": "packages/wallet-embed"
+    "url": "git+https://github.com/CeloMX/wallet-agnostic-provider-sdk.git"
   },
-  "homepage": "https://github.com/gerryalvrz/neonpayments/tree/main/packages/wallet-embed",
+  "homepage": "https://github.com/CeloMX/wallet-agnostic-provider-sdk",
   "bugs": {
-    "url": "https://github.com/gerryalvrz/neonpayments/issues"
+    "url": "https://github.com/CeloMX/wallet-agnostic-provider-sdk/issues"
   },
   "keywords": [
     "wallet",
