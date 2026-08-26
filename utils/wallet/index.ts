@@ -1,12 +1,6 @@
 /**
- * Wallet Utilities - Main Export
+ * Wallet utilities — re-exported from @neonpay/wallet-embed.
+ * Prefer importing from the package in new code.
  */
 
-export * from './types';
-export * from './detection';
-export * from './selection';
-export * from './session';
-export * from './waitForSession';
-export * from './providers';
-export * from './useWallet';
-
+export * from '@neonpay/wallet-embed';

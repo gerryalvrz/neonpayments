@@ -114,10 +114,26 @@ const securityHeaders = [
   },
 ];
 
+const path = require('path');
+
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ['@neonpay/wallet-embed'],
   experimental: {
     serverComponentsExternalPackages: ['postgres'],
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // SDK ESM build is missing .js extensions; pin the CJS entry.
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        '@mento-protocol/mento-sdk$': path.join(
+          __dirname,
+          'node_modules/@mento-protocol/mento-sdk/dist/index.js'
+        ),
+      };
+    }
+    return config;
   },
   async headers() {
     return [

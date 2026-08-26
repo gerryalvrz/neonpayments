@@ -1,5 +1,9 @@
 # Wallet Provider Setup Guide
 
+NeonPay uses **`@neonpay/wallet-embed`** — a vendor-agnostic embedded wallet SDK.
+
+Other projects can copy `packages/wallet-embed` or depend on it. See [packages/wallet-embed/README.md](packages/wallet-embed/README.md).
+
 ## Overview
 
 NeonPay supports **multiple wallet providers**:
@@ -27,31 +31,23 @@ NEXT_PUBLIC_WAAP_USE_STAGING=false
 NEXT_PUBLIC_CELO_RPC_URL=https://forno.celo.org
 ```
 
+Config lives in `components/Wallet/WalletEmbedRoot.tsx` (passed into `WalletEmbedProvider`).
+
 ## Architecture
 
 ```
-utils/wallet/
-├── types.ts              # WalletProvider + InjectedWalletSession
-├── selection.ts          # Persist standalone provider choice
-├── session.ts            # Bridge → adapter session bus
-├── detection.ts          # MiniPay vs standalone
-├── providers/
-│   ├── minipay.ts
-│   ├── privy.ts
-│   ├── thirdweb.ts
-│   ├── waap.ts
-│   └── index.ts
-└── useWallet.ts          # Vendor-agnostic hook (no Privy imports)
+packages/wallet-embed/          # reusable SDK
+  WalletEmbedProvider           # config + mount one vendor SDK
+  useWallet()                   # vendor-agnostic hook
+  ProviderPicker                # unstyled picker for other apps
 
 components/Wallet/
-├── WalletSdkShell.tsx    # Lazy-mounts selected SDK only
-├── PrivyProvider.tsx + PrivyWalletBridge.tsx
-├── ThirdwebProvider.tsx
-├── WaapProvider.tsx
-└── ProviderPickerModal.tsx
+  WalletEmbedRoot.tsx           # NeonPay credentials / namespace
+  ProviderPickerModal.tsx       # NeonPay-themed picker
 ```
 
-App screens use `useApp().wallet` (`connect`, `sendToken`, `setProvider`, etc.).
+App screens still use `useApp().wallet` (`connect`, `sendToken`, `setProvider`, etc.).
+`utils/wallet/*` re-exports the package so existing imports keep working.
 
 ## UX
 

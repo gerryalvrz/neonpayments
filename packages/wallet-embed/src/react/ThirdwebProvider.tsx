@@ -4,7 +4,7 @@
  * thirdweb client + provider wrapper with session bridge.
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import {
   ThirdwebProvider,
   useActiveAccount,
@@ -14,18 +14,35 @@ import {
   useDisconnect,
 } from 'thirdweb/react';
 import { createThirdwebClient } from 'thirdweb';
-import { celo } from 'thirdweb/chains';
+import { defineChain } from 'thirdweb/chains';
 import { inAppWallet, EIP1193 } from 'thirdweb/wallets';
-import { setWalletSession } from '@/utils/wallet/session';
-import type { Eip1193Provider } from '@/utils/wallet/types';
+import { getWalletEmbedConfig } from '../config';
+import { setWalletSession } from '../session';
+import type { Eip1193Provider } from '../types';
 
-const clientId = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '';
+function useEmbedChain() {
+  return useMemo(() => {
+    const { chain } = getWalletEmbedConfig();
+    return defineChain({
+      id: chain.id,
+      name: chain.name,
+      nativeCurrency: chain.nativeCurrency,
+      rpc: chain.rpcUrl,
+    });
+  }, []);
+}
 
-export const thirdwebClient = createThirdwebClient({
-  clientId: clientId || 'placeholder',
-});
-
-function ThirdwebWalletBridge({ children }: { children: React.ReactNode }) {
+function ThirdwebWalletBridge({ children }: { children: ReactNode }) {
+  const { credentials, chain: chainConfig } = getWalletEmbedConfig();
+  const clientId = credentials.thirdweb?.clientId || '';
+  const client = useMemo(
+    () =>
+      createThirdwebClient({
+        clientId: clientId || 'placeholder',
+      }),
+    [clientId]
+  );
+  const embedChain = useEmbedChain();
   const account = useActiveAccount();
   const wallet = useActiveWallet();
   const chain = useActiveWalletChain();
@@ -37,18 +54,18 @@ function ThirdwebWalletBridge({ children }: { children: React.ReactNode }) {
     try {
       return EIP1193.toProvider({
         wallet,
-        client: thirdwebClient,
-        chain: chain || celo,
+        client,
+        chain: chain || embedChain,
       }) as Eip1193Provider;
     } catch {
       return null;
     }
-  }, [wallet, chain]);
+  }, [wallet, chain, client, embedChain]);
 
   const login = useCallback(async () => {
     await connect({
-      client: thirdwebClient,
-      chain: celo,
+      client,
+      chain: embedChain,
       wallets: [
         inAppWallet({
           auth: {
@@ -57,7 +74,7 @@ function ThirdwebWalletBridge({ children }: { children: React.ReactNode }) {
         }),
       ],
     });
-  }, [connect]);
+  }, [connect, client, embedChain]);
 
   const logout = useCallback(async () => {
     if (wallet) {
@@ -71,7 +88,7 @@ function ThirdwebWalletBridge({ children }: { children: React.ReactNode }) {
       ready: Boolean(clientId) || true,
       authenticated: Boolean(account?.address),
       address: account?.address || null,
-      chainId: chain?.id || 42220,
+      chainId: chain?.id || chainConfig.id,
       login,
       logout,
       eip1193,
@@ -82,7 +99,7 @@ function ThirdwebWalletBridge({ children }: { children: React.ReactNode }) {
           }
         : undefined,
     });
-  }, [account, chain, eip1193, login, logout, isConnecting]);
+  }, [account, chain, chainConfig.id, clientId, eip1193, login, logout, isConnecting]);
 
   useEffect(() => {
     return () => setWalletSession(null);
@@ -91,11 +108,7 @@ function ThirdwebWalletBridge({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export function ThirdwebProviderWrapper({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function ThirdwebProviderWrapper({ children }: { children: ReactNode }) {
   return (
     <ThirdwebProvider>
       <ThirdwebWalletBridge>{children}</ThirdwebWalletBridge>

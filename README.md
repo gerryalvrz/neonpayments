@@ -87,6 +87,14 @@ utils/
 - ✅ UI components (Button, Card, Input, Badge, Loading)
 - ✅ Accessibility features
 
+## Wallet SDK
+
+The vendor-agnostic wallet layer (Privy / thirdweb / human.tech WaaP / MiniPay) is a reusable package:
+
+**[`packages/wallet-embed`](packages/wallet-embed)** — `@neonpay/wallet-embed`
+
+Other apps wrap with `WalletEmbedProvider` and call `useWallet()`. Setup: [WALLET_SETUP.md](WALLET_SETUP.md).
+
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)

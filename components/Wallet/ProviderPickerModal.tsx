@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Modal } from '@/components/UI/Modal';
 import { Button } from '@/components/UI/Button';
 import {
-  STANDALONE_PROVIDERS,
+  getStandaloneProviders,
   getProviderDisplayName,
 } from '@/utils/wallet/selection';
 import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
@@ -68,7 +68,7 @@ export function ProviderPickerModal({
       <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{subtitle}</p>
       {error && <div className="mb-3 text-sm text-semantic-error">{error}</div>}
       <div className="space-y-2">
-        {STANDALONE_PROVIDERS.map((provider) => {
+        {getStandaloneProviders().map((provider) => {
           const active = selected === provider;
           const loading = connecting || pending === provider;
           return (

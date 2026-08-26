@@ -16,7 +16,8 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@neonpay/wallet-embed": ["./packages/wallet-embed/src/index.ts"]
     },
     "allowJs": true,
     "incremental": true,
@@ -39,6 +40,8 @@
     "config/**/*.tsx",
     "utils/**/*.ts",
     "utils/**/*.tsx",
+    "packages/wallet-embed/src/**/*.ts",
+    "packages/wallet-embed/src/**/*.tsx",
     ".next/types/**/*.ts"
   ],
   "exclude": [

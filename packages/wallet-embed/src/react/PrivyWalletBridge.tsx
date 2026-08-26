@@ -1,15 +1,16 @@
 'use client';
 
 /**
- * Publishes Privy session into the wallet session bus for PrivyProvider adapter.
+ * Publishes Privy session into the wallet session bus for the Privy adapter.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { setWalletSession } from '@/utils/wallet/session';
-import type { Eip1193Provider } from '@/utils/wallet/types';
+import { getWalletEmbedConfig } from '../config';
+import { setWalletSession } from '../session';
+import type { Eip1193Provider } from '../types';
 
-export function PrivyWalletBridge({ children }: { children: React.ReactNode }) {
+export function PrivyWalletBridge({ children }: { children: ReactNode }) {
   const { ready, authenticated, login, logout, user } = usePrivy();
   const { wallets } = useWallets();
   const eip1193Ref = useRef<Eip1193Provider | null>(null);
@@ -43,7 +44,7 @@ export function PrivyWalletBridge({ children }: { children: React.ReactNode }) {
         ready,
         authenticated,
         address,
-        chainId: 42220,
+        chainId: getWalletEmbedConfig().chain.id,
         login: async () => {
           await login();
         },

@@ -2,20 +2,9 @@
 
 Unified wallet layer for **MiniPay**, **Privy**, **thirdweb**, and **human.tech (WaaP)**.
 
-See [WALLET_SETUP.md](../../WALLET_SETUP.md) for env vars and UX.
+Implementation lives in **`@neonpay/wallet-embed`** (`packages/wallet-embed`). This folder re-exports it so existing `@/utils/wallet/...` imports keep working.
 
-## Layout
-
-```
-utils/wallet/
-├── types.ts
-├── selection.ts      # localStorage: neonpay.walletProvider
-├── session.ts        # InjectedWalletSession bus (bridges → adapters)
-├── detection.ts
-├── providers/        # minipay, privy, thirdweb, waap
-├── useWallet.ts      # No vendor hook imports
-└── index.ts
-```
+See [WALLET_SETUP.md](../../WALLET_SETUP.md) and [packages/wallet-embed/README.md](../../packages/wallet-embed/README.md).
 
 ## Usage
 
@@ -29,4 +18,4 @@ const { wallet } = useApp();
 
 Standalone connect flows open `ProviderPickerModal`. MiniPay auto-connects without a picker.
 
-`useWallet` stays vendor-agnostic; React bridges under `components/Wallet/` publish sessions via `setWalletSession`.
+`useWallet` stays vendor-agnostic; React bridges inside the SDK publish sessions via `setWalletSession`.

@@ -2,16 +2,15 @@
 
 /**
  * human.tech WaaP — no API key required.
- * Pattern aligned with MotusDAO hub: initWaaP → window.waap (EIP-1193).
+ * Pattern: initWaaP → window.waap (EIP-1193).
  *
  * @see https://docs.wallet.human.tech/quick-start
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { setWalletSession } from '@/utils/wallet/session';
-import type { Eip1193Provider } from '@/utils/wallet/types';
-
-const CELO_CHAIN_ID_HEX = '0xa4ec'; // 42220
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { getChainIdHex, getWalletEmbedConfig } from '../config';
+import { setWalletSession } from '../session';
+import type { Eip1193Provider } from '../types';
 
 type WaapProviderApi = Eip1193Provider & {
   login?: () => Promise<string | null>;
@@ -27,35 +26,37 @@ function getWaap(): WaapProviderApi | undefined {
   return (window as Window & { waap?: WaapProviderApi }).waap;
 }
 
-async function ensureCelo(waap: WaapProviderApi): Promise<void> {
+async function ensureConfiguredChain(waap: WaapProviderApi): Promise<void> {
+  const { chain } = getWalletEmbedConfig();
+  const chainIdHex = getChainIdHex();
   try {
-    const chainId = await waap.request({ method: 'eth_chainId' });
-    if (String(chainId).toLowerCase() === CELO_CHAIN_ID_HEX) return;
+    const current = await waap.request({ method: 'eth_chainId' });
+    if (String(current).toLowerCase() === chainIdHex.toLowerCase()) return;
     try {
       await waap.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: CELO_CHAIN_ID_HEX }],
+        params: [{ chainId: chainIdHex }],
       });
     } catch {
       await waap.request({
         method: 'wallet_addEthereumChain',
         params: [
           {
-            chainId: CELO_CHAIN_ID_HEX,
-            chainName: 'Celo',
-            nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-            rpcUrls: [process.env.NEXT_PUBLIC_CELO_RPC_URL || 'https://forno.celo.org'],
-            blockExplorerUrls: ['https://celoscan.io'],
+            chainId: chainIdHex,
+            chainName: chain.name,
+            nativeCurrency: chain.nativeCurrency,
+            rpcUrls: [chain.rpcUrl],
+            blockExplorerUrls: chain.blockExplorerUrl ? [chain.blockExplorerUrl] : undefined,
           },
         ],
       });
     }
   } catch (error) {
-    console.warn('[WAAP] Could not ensure Celo network', error);
+    console.warn('[WAAP] Could not ensure configured network', error);
   }
 }
 
-function WaapWalletBridge({ children }: { children: React.ReactNode }) {
+function WaapWalletBridge({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const initOnce = useRef(false);
 
@@ -64,10 +65,10 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
     initOnce.current = true;
 
     const initialize = async () => {
+      const config = getWalletEmbedConfig();
       try {
         const waapSdk = await import('@human.tech/waap-sdk');
-        const walletConnectProjectId =
-          process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined;
+        const walletConnectProjectId = config.credentials.waap?.walletConnectProjectId;
 
         const authenticationMethods: Array<
           'email' | 'phone' | 'social' | 'biometrics' | 'wallet'
@@ -76,7 +77,7 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
           : ['email', 'phone', 'social', 'biometrics'];
 
         waapSdk.initWaaP({
-          useStaging: process.env.NEXT_PUBLIC_WAAP_USE_STAGING === 'true',
+          useStaging: Boolean(config.credentials.waap?.useStaging),
           walletConnectProjectId,
           config: {
             authenticationMethods,
@@ -87,12 +88,11 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
             showSecured: true,
           },
           project: {
-            name: 'NeonPay MX',
-            entryTitle: 'Log in to NeonPay MX',
+            name: config.appName,
+            entryTitle: config.loginTitle,
           },
         });
 
-        // Poll briefly for window.waap (SDK sometimes attaches async)
         let provider = getWaap();
         for (let i = 0; i < 20 && !provider; i++) {
           await new Promise((r) => setTimeout(r, 100));
@@ -107,7 +107,7 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
             ready: false,
             authenticated: false,
             address: null,
-            chainId: 42220,
+            chainId: config.chain.id,
             login: async () => {
               throw new Error('WaaP SDK did not initialize (window.waap missing)');
             },
@@ -117,7 +117,6 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        console.log('[WAAP] Ready. window.waap available.');
         setReady(true);
       } catch (error) {
         console.error('[WAAP] Failed to init', error);
@@ -135,12 +134,11 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
     }
 
     const loginType = await waap.login();
-    // MotusDAO pattern: null means user closed the modal
     if (loginType === null) {
       throw new Error('Login cancelled');
     }
 
-    await ensureCelo(waap);
+    await ensureConfiguredChain(waap);
 
     const accounts = (await waap.request({
       method: 'eth_requestAccounts',
@@ -186,7 +184,7 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
         ready: Boolean(getWaap()),
         authenticated: Boolean(address),
         address,
-        chainId: 42220,
+        chainId: getWalletEmbedConfig().chain.id,
         login,
         logout,
         eip1193,
@@ -222,6 +220,6 @@ function WaapWalletBridge({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export function WaapProviderWrapper({ children }: { children: React.ReactNode }) {
+export function WaapProviderWrapper({ children }: { children: ReactNode }) {
   return <WaapWalletBridge>{children}</WaapWalletBridge>;
 }

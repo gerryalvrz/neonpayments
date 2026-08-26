@@ -2,6 +2,9 @@
   "name": "neonpay-mx",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,6 +14,7 @@
   "dependencies": {
     "@human.tech/waap-sdk": "^2.0.0",
     "@mercadopago/sdk-react": "^1.0.6",
+    "@neonpay/wallet-embed": "*",
     "@paper-design/shaders-react": "^0.0.80",
     "@privy-io/react-auth": "^3.7.0",
     "@selfxyz/core": "^1.0.8",
