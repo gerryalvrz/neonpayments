@@ -89,11 +89,12 @@ utils/
 
 ## Wallet SDK
 
-The vendor-agnostic wallet layer (Privy / thirdweb / human.tech WaaP / MiniPay) is a reusable package:
+The vendor-agnostic wallet layer (Privy / thirdweb / human.tech WaaP / MiniPay) ships as **[`@celomx/wallet-embed`](https://www.npmjs.com/package/@celomx/wallet-embed)**.
 
-**[`packages/wallet-embed`](packages/wallet-embed)** — `@celomx/wallet-embed`
+- Source: [CeloMX/wallet-agnostic-provider-sdk](https://github.com/CeloMX/wallet-agnostic-provider-sdk)
+- In this repo: [`packages/wallet-embed`](packages/wallet-embed)
 
-Other apps wrap with `WalletEmbedProvider` and call `useWallet()`. Setup: [WALLET_SETUP.md](WALLET_SETUP.md).
+Other apps: `npm install @celomx/wallet-embed`, wrap with `WalletEmbedProvider`, call `useWallet()`. NeonPay setup: [WALLET_SETUP.md](WALLET_SETUP.md).
 
 ## Learn More
 

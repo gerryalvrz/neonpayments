@@ -2,7 +2,7 @@
 
 Unified wallet layer for **MiniPay**, **Privy**, **thirdweb**, and **human.tech (WaaP)**.
 
-Implementation lives in **`@celomx/wallet-embed`** (`packages/wallet-embed`). This folder re-exports it so existing `@/utils/wallet/...` imports keep working.
+Implementation is **[`@celomx/wallet-embed`](https://www.npmjs.com/package/@celomx/wallet-embed)** ([CeloMX/wallet-agnostic-provider-sdk](https://github.com/CeloMX/wallet-agnostic-provider-sdk)). This folder re-exports it so existing `@/utils/wallet/...` imports keep working.
 
 See [WALLET_SETUP.md](../../WALLET_SETUP.md) and [packages/wallet-embed/README.md](../../packages/wallet-embed/README.md).
 

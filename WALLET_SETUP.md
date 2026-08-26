@@ -1,8 +1,11 @@
 # Wallet Provider Setup Guide
 
-NeonPay uses **`@celomx/wallet-embed`** — a vendor-agnostic embedded wallet SDK.
+NeonPay uses **[`@celomx/wallet-embed`](https://www.npmjs.com/package/@celomx/wallet-embed)** — a vendor-agnostic embedded wallet SDK.
 
-Other projects can copy `packages/wallet-embed` or depend on it. See [packages/wallet-embed/README.md](packages/wallet-embed/README.md).
+**Public repo:** [CeloMX/wallet-agnostic-provider-sdk](https://github.com/CeloMX/wallet-agnostic-provider-sdk)  
+**Integration guide:** [packages/wallet-embed/README.md](packages/wallet-embed/README.md)
+
+Other apps should `npm install @celomx/wallet-embed` (or `github:CeloMX/wallet-agnostic-provider-sdk`). This repo keeps a workspace copy under `packages/wallet-embed`.
 
 ## Overview
 
@@ -23,7 +26,7 @@ NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
 NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your_thirdweb_client_id
 
 # Optional for human.tech WaaP (only if enabling external wallets via WalletConnect)
-# Email / phone / social work with ZERO keys — same as MotusDAO hub.
+# Email / phone / social work with ZERO keys.
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 NEXT_PUBLIC_WAAP_USE_STAGING=false
 
@@ -31,23 +34,27 @@ NEXT_PUBLIC_WAAP_USE_STAGING=false
 NEXT_PUBLIC_CELO_RPC_URL=https://forno.celo.org
 ```
 
-Config lives in `components/Wallet/WalletEmbedRoot.tsx` (passed into `WalletEmbedProvider`).
+These are passed into `WalletEmbedProvider` from `components/Wallet/WalletEmbedRoot.tsx`.
 
 ## Architecture
 
 ```
-packages/wallet-embed/          # reusable SDK
+@celomx/wallet-embed            # npm / CeloMX/wallet-agnostic-provider-sdk
   WalletEmbedProvider           # config + mount one vendor SDK
   useWallet()                   # vendor-agnostic hook
   ProviderPicker                # unstyled picker for other apps
 
+packages/wallet-embed/          # workspace copy used by this app
+
 components/Wallet/
-  WalletEmbedRoot.tsx           # NeonPay credentials / namespace
+  WalletEmbedRoot.tsx           # NeonPay credentials / namespace (`neonpay`)
   ProviderPickerModal.tsx       # NeonPay-themed picker
 ```
 
 App screens still use `useApp().wallet` (`connect`, `sendToken`, `setProvider`, etc.).
 `utils/wallet/*` re-exports the package so existing imports keep working.
+
+Next.js: `transpilePackages: ['@celomx/wallet-embed']` in `next.config.js`.
 
 ## UX
 
