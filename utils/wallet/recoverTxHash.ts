@@ -1,1 +1,1 @@
-export { recoverBroadcastTxHash, sendWalletTransaction } from '@neonpay/wallet-embed';
+export { recoverBroadcastTxHash, sendWalletTransaction } from '@celomx/wallet-embed';

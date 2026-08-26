@@ -17,7 +17,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@neonpay/wallet-embed": ["./packages/wallet-embed/src/index.ts"]
+      "@celomx/wallet-embed": ["./packages/wallet-embed/src/index.ts"]
     },
     "allowJs": true,
     "incremental": true,

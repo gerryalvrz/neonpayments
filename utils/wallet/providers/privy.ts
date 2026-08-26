@@ -1,1 +1,1 @@
-export { PrivyProvider } from '@neonpay/wallet-embed';
+export { PrivyProvider } from '@celomx/wallet-embed';

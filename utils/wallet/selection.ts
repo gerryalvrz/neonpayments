@@ -8,4 +8,4 @@ export {
   setSelectedStandaloneProvider,
   getProviderDisplayName,
   subscribeProviderSelection,
-} from '@neonpay/wallet-embed';
+} from '@celomx/wallet-embed';

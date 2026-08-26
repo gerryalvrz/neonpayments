@@ -5,4 +5,4 @@ export {
   PrivyProvider,
   ThirdwebWalletProvider,
   WaapProvider,
-} from '@neonpay/wallet-embed';
+} from '@celomx/wallet-embed';

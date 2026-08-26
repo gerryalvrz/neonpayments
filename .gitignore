@@ -27,6 +27,10 @@ yarn-error.log*
 # local env files
 .env*.local
 
+# accidental clone of the public SDK repo
+/wallet-agnostic-provider-sdk/
+
+
 # foundry build artifacts
 /broadcast/
 /cache/

@@ -3,5 +3,5 @@ export {
   isMiniPayEnvironment,
   isMobileDevice,
   isDesktopDevice,
-} from '@neonpay/wallet-embed';
-export type { Environment } from '@neonpay/wallet-embed';
+} from '@celomx/wallet-embed';
+export type { Environment } from '@celomx/wallet-embed';

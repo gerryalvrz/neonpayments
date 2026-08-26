@@ -7,4 +7,4 @@ export type {
   WalletProvider,
   TransactionRequest,
   WalletState,
-} from '@neonpay/wallet-embed';
+} from '@celomx/wallet-embed';

@@ -1,6 +1,6 @@
 # Wallet Provider Setup Guide
 
-NeonPay uses **`@neonpay/wallet-embed`** — a vendor-agnostic embedded wallet SDK.
+NeonPay uses **`@celomx/wallet-embed`** — a vendor-agnostic embedded wallet SDK.
 
 Other projects can copy `packages/wallet-embed` or depend on it. See [packages/wallet-embed/README.md](packages/wallet-embed/README.md).
 

@@ -1,1 +1,1 @@
-export { WaapProvider } from '@neonpay/wallet-embed';
+export { WaapProvider } from '@celomx/wallet-embed';

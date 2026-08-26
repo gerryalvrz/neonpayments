@@ -91,7 +91,7 @@ utils/
 
 The vendor-agnostic wallet layer (Privy / thirdweb / human.tech WaaP / MiniPay) is a reusable package:
 
-**[`packages/wallet-embed`](packages/wallet-embed)** — `@neonpay/wallet-embed`
+**[`packages/wallet-embed`](packages/wallet-embed)** — `@celomx/wallet-embed`
 
 Other apps wrap with `WalletEmbedProvider` and call `useWallet()`. Setup: [WALLET_SETUP.md](WALLET_SETUP.md).
 

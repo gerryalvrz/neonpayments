@@ -1,1 +1,1 @@
-export { waitForWalletSession } from '@neonpay/wallet-embed';
+export { waitForWalletSession } from '@celomx/wallet-embed';

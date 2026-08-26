@@ -1,3 +1,3 @@
 'use client';
 
-export { WalletSdkShell, WalletEmbedProvider } from '@neonpay/wallet-embed';
+export { WalletSdkShell, WalletEmbedProvider } from '@celomx/wallet-embed';

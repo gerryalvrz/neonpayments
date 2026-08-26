@@ -1,1 +1,1 @@
-export { ERC20_ABI, encodeTransfer, encodeApprove } from '@neonpay/wallet-embed';
+export { ERC20_ABI, encodeTransfer, encodeApprove } from '@celomx/wallet-embed';

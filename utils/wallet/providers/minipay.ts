@@ -1,1 +1,1 @@
-export { MiniPayProvider } from '@neonpay/wallet-embed';
+export { MiniPayProvider } from '@celomx/wallet-embed';

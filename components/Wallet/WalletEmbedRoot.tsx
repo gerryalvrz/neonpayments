@@ -5,7 +5,7 @@ import {
   CELO_MAINNET,
   WalletEmbedProvider,
   type WalletEmbedConfigInput,
-} from '@neonpay/wallet-embed';
+} from '@celomx/wallet-embed';
 
 const config: WalletEmbedConfigInput = {
   appName: 'NeonPay MX',

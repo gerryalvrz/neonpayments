@@ -1,1 +1,1 @@
-export { ThirdwebWalletProvider } from '@neonpay/wallet-embed';
+export { ThirdwebWalletProvider } from '@celomx/wallet-embed';

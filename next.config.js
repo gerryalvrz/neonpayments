@@ -118,7 +118,7 @@ const path = require('path');
 
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@neonpay/wallet-embed'],
+  transpilePackages: ['@celomx/wallet-embed'],
   experimental: {
     serverComponentsExternalPackages: ['postgres'],
   },

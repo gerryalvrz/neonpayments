@@ -1,6 +1,6 @@
 /**
- * Wallet utilities — re-exported from @neonpay/wallet-embed.
+ * Wallet utilities — re-exported from @celomx/wallet-embed.
  * Prefer importing from the package in new code.
  */
 
-export * from '@neonpay/wallet-embed';
+export * from '@celomx/wallet-embed';
