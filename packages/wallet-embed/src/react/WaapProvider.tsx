@@ -110,8 +110,8 @@ function WaapWalletBridge({ children }: { children: ReactNode }) {
         const walletConnectProjectId = config.credentials.waap?.walletConnectProjectId;
 
         const authenticationMethods: Array<
-          'email' | 'phone' | 'social' | 'biometrics' | 'wallet'
-        > = ['email', 'phone', 'social', 'biometrics', 'wallet'];
+          'email' | 'phone' | 'social' | 'biometrics'
+        > = ['email', 'phone', 'social', 'biometrics'];
 
         waapSdk.initWaaP({
           useStaging: Boolean(config.credentials.waap?.useStaging),
