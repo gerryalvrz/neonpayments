@@ -8,38 +8,6 @@ import { getWalletEmbedConfig } from '../config';
 import { sendWalletTransaction } from '../recoverTxHash';
 import type { WalletProvider, WalletAccount, TransactionRequest } from '../types';
 
-/** MiniPay / injected providers often reject with plain objects, not Error. */
-function formatProviderError(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof error === 'string' && error.trim()) return error;
-  if (error && typeof error === 'object') {
-    const o = error as Record<string, unknown>;
-    const nested = o.error;
-    const candidates = [
-      o.message,
-      o.msg,
-      o.reason,
-      o.code != null ? `code ${String(o.code)}` : '',
-      nested instanceof Error ? nested.message : null,
-      nested && typeof nested === 'object'
-        ? (nested as { message?: unknown }).message
-        : nested,
-    ];
-    for (const value of candidates) {
-      if (typeof value === 'string' && value.trim() && value !== '[object Object]') {
-        return value.trim();
-      }
-    }
-    try {
-      const json = JSON.stringify(error);
-      if (json && json !== '{}') return json;
-    } catch {
-      // ignore
-    }
-  }
-  return 'Unknown MiniPay error';
-}
-
 export class MiniPayProvider implements WalletProvider {
   private account: WalletAccount | null = null;
 
@@ -70,16 +38,9 @@ export class MiniPayProvider implements WalletProvider {
     }
 
     try {
-      // Prefer silent accounts when MiniPay already injected a session.
-      let accounts = (await ethereum.request({
-        method: 'eth_accounts',
+      const accounts = (await ethereum.request({
+        method: 'eth_requestAccounts',
       })) as string[];
-
-      if (!accounts?.length) {
-        accounts = (await ethereum.request({
-          method: 'eth_requestAccounts',
-        })) as string[];
-      }
 
       if (!accounts || accounts.length === 0) {
         throw new Error('No accounts found');
@@ -96,7 +57,8 @@ export class MiniPayProvider implements WalletProvider {
 
       return this.account;
     } catch (error: unknown) {
-      throw new Error(`Failed to connect to MiniPay: ${formatProviderError(error)}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to connect to MiniPay: ${message}`);
     }
   }
 
@@ -176,7 +138,8 @@ export class MiniPayProvider implements WalletProvider {
         return String(txHash);
       });
     } catch (error: unknown) {
-      throw new Error(`Failed to sign transaction: ${formatProviderError(error)}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to sign transaction: ${message}`);
     }
   }
 
@@ -196,7 +159,8 @@ export class MiniPayProvider implements WalletProvider {
 
       return String(signature);
     } catch (error: unknown) {
-      throw new Error(`Failed to sign message: ${formatProviderError(error)}`);
+      const messageText = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to sign message: ${messageText}`);
     }
   }
 

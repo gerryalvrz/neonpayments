@@ -131,28 +131,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setThemeState(prev => prev === 'light' ? 'dark' : 'light');
   }, []);
 
-  // Sync wallet address with user when wallet connects (layout so /home
-  // does not paint one frame of “Abriendo…” after a successful connect).
-  useLayoutEffect(() => {
-    if (!(walletHook.isConnected && walletHook.address)) return;
-
-    setUser((prev) => {
-      if (prev && prev.walletAddress !== walletHook.address) {
-        return {
-          ...prev,
-          walletAddress: walletHook.address || undefined,
-        };
-      }
-      if (!prev && walletHook.address) {
-        return {
-          id: walletHook.address,
-          walletAddress: walletHook.address,
-          isVerified: true,
-          selfVerified: false,
-        };
-      }
-      return prev;
-    });
+  // Sync wallet address with user when wallet connects
+  useEffect(() => {
+    if (walletHook.isConnected && walletHook.address) {
+      // Update user with wallet address if not already set
+      setUser(prev => {
+        if (prev && prev.walletAddress !== walletHook.address) {
+          return {
+            ...prev,
+            walletAddress: walletHook.address || undefined,
+          };
+        }
+        // If no user exists but wallet is connected, create minimal user
+        if (!prev && walletHook.address) {
+          return {
+            id: walletHook.address,
+            walletAddress: walletHook.address,
+            isVerified: true,
+            selfVerified: false,
+          };
+        }
+        return prev;
+      });
+    }
   }, [walletHook.isConnected, walletHook.address]);
 
   useEffect(() => {
