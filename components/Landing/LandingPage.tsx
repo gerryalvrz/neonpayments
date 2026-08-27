@@ -7,6 +7,7 @@ import { Container } from '@/components/Layout/Container';
 import { Button } from '@/components/UI/Button';
 import { NeonHoverCard } from '@/components/UI/NeonHoverCard';
 import { Badge } from '@/components/UI/Badge';
+import { YieldCard } from '@/components/UI/yield-card';
 import { ProviderPickerModal } from '@/components/Wallet/ProviderPickerModal';
 import {
   Icon,
@@ -15,11 +16,6 @@ import {
   ArrowDownIcon,
   SwapIcon,
   LanguageIcon,
-  CreditCardIcon,
-  HistoryIcon,
-  ShieldIcon,
-  BoltIcon,
-  UserIcon,
 } from '@/components/Icons';
 import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
 import { waitForWalletSession } from '@/utils/wallet/waitForSession';
@@ -42,93 +38,58 @@ const COPY = {
     getStarted: 'Get started',
     openApp: 'Open app',
     connecting: 'Connecting…',
-    heroEyebrow: 'Payments for Mexico & Latin America',
-    heroTitle: 'Send digital dollars.',
-    heroSubtitle: 'As simple as a transfer.',
+    heroEyebrow: 'Payments on Celo for Mexico and LATAM',
+    heroTitle: 'LATAM stablecoins. One wallet.',
+    heroSubtitle: 'Hold. Send. Swap. Spend.',
     heroBody:
-      'NeonPay is a wallet for sending, receiving, and converting money on Celo. Connect once, then pay with USDC, USDT, or USDm — no crypto expertise required.',
-    seeLive: 'See what’s live',
+      'NeonPay is a stablecoin wallet and payments app built on Celo. Use it on the web or directly inside MiniPay to hold supported Ripio and Mento stablecoins, send and receive payments, and swap available pairs.',
+    seeLive: 'See how it works',
     partnersEyebrow: 'Built on Celo',
     partnersTitle: 'The stack behind NeonPay',
-    whatTitle: 'What NeonPay is',
-    whatBody:
-      'A simple payments app. You log in with MiniPay on your phone, or with email / a wallet on the web. After that you can send to an address, a Celo name, or a QR code — and convert Argentine peso and Brazilian real tokens into USDT when you need to.',
     howTitle: 'How it works',
     howSteps: [
       {
         n: '1',
         title: 'Connect',
-        body: 'MiniPay opens automatically. On the web, pick Privy, thirdweb, or human.tech.',
+        body: 'Use NeonPay on the web or open it directly inside MiniPay.',
       },
       {
         n: '2',
-        title: 'Send or receive',
-        body: 'Pay USDC, USDT, or USDm to a wallet, a name, or a QR. Share yours to get paid.',
+        title: 'Move money',
+        body: 'Hold, send and receive supported LATAM and dollar stablecoins.',
       },
       {
         n: '3',
-        title: 'Convert when you need to',
-        body: 'Swap live ARS and BRL tokens to USDT — the corridor that is actually on today.',
+        title: 'Swap when you need to',
+        body: 'Trade available Ripio and Mento pairs, including wARS and wBRL today. wMXN coming next.',
       },
     ],
-    liveTitle: 'Live today',
-    liveSubtitle: 'This is what you can do after you log in.',
+    liveTitle: 'What you can do',
     live: [
       {
+        title: 'Hold',
+        body: 'Supported LATAM and dollar stablecoins.',
+      },
+      {
         title: 'Send',
-        body: 'USDC, USDT, and USDm to an address, Celo Name Service, or QR.',
+        body: 'To a wallet, Celo name or QR.',
       },
       {
         title: 'Receive',
-        body: 'Show a QR or share a payment request from your wallet.',
+        body: 'Share an address, QR or payment request.',
       },
       {
-        title: 'Convert',
-        body: 'wARS and wBRL ↔ USDT through Textile FX.',
-      },
-      {
-        title: 'Log in',
-        body: 'MiniPay, email / social, or a wallet you already have.',
-      },
-      {
-        title: 'Activity',
-        body: 'See sends and swaps after you leave and come back.',
-      },
-      {
-        title: 'English & Spanish',
-        body: 'Switch language any time. MiniPay defaults to Spanish.',
+        title: 'Swap',
+        body: 'Trade available pairs through integrated liquidity.',
       },
     ],
-    roadmapTitle: 'What’s next',
-    roadmapSubtitle: 'Honest roadmap. We will not fake these in the app.',
-    later: [
-      {
-        title: 'Deposit from Mercado Pago',
-        body: 'Move MXN from Mercado Pago into your wallet as USDC. You can connect the account today; funding is not live yet.',
-      },
-      {
-        title: 'Card top-up',
-        body: 'Add funds with a debit or credit card.',
-      },
-      {
-        title: 'Pay Mexican bills',
-        body: 'CFE, phone, and other services — without leaving NeonPay.',
-      },
-      {
-        title: 'More conversion pairs',
-        body: 'Stablecoin-to-stablecoin swaps, and Mexican peso when that corridor exists.',
-      },
-      {
-        title: 'Contacts and receipts',
-        body: 'Saved recipients and a shareable receipt after every send.',
-      },
-      {
-        title: 'Identity verification',
-        body: 'Optional Self Protocol check for flows that need it.',
-      },
-    ],
-    ctaTitle: 'Ready to try it?',
-    ctaBody: 'Log in, then you are in the same app we use today: send, receive, convert.',
+    miniPayTitle: 'Built for MiniPay too',
+    miniPayBody:
+      "NeonPay runs directly inside MiniPay, extending the wallet to supported LATAM stablecoins that aren't natively available in the app.",
+    miniPaySpend:
+      'Swap local stables into MiniPay-supported dollar stablecoins and use them with the MiniPay Card.',
+    ctaTitle: 'Use NeonPay',
+    ctaBody: 'On the web, or directly inside MiniPay.',
     footer: 'A Celo MX product',
     error: 'Could not connect wallet',
   },
@@ -138,114 +99,92 @@ const COPY = {
     getStarted: 'Empieza ahora',
     openApp: 'Abrir app',
     connecting: 'Conectando…',
-    heroEyebrow: 'Pagos para México y América Latina',
-    heroTitle: 'Envía dólares digitales.',
-    heroSubtitle: 'Tan simple como una transferencia.',
+    heroEyebrow: 'Pagos en Celo para México y LATAM',
+    heroTitle: 'Stables de LATAM. Una wallet.',
+    heroSubtitle: 'Guarda. Envía. Cambia. Gasta.',
     heroBody:
-      'NeonPay es una billetera para enviar, recibir y convertir dinero en Celo. Conectas una vez y pagas con USDC, USDT o USDm — sin saber de cripto.',
-    seeLive: 'Ver lo que ya funciona',
+      'NeonPay es una wallet de stablecoins y una app de pagos construida sobre Celo. Úsala en la web o directo en MiniPay para guardar stables de Ripio y Mento, enviar y recibir pagos, y cambiar los pares disponibles.',
+    seeLive: 'Ver cómo funciona',
     partnersEyebrow: 'Construido sobre Celo',
     partnersTitle: 'El stack detrás de NeonPay',
-    whatTitle: 'Qué es NeonPay',
-    whatBody:
-      'Una app de pagos simple. Entras con MiniPay en el celular, o con correo / una billetera en la web. Después puedes enviar a una dirección, un nombre Celo o un QR — y convertir tokens de peso argentino y real brasileño a USDT cuando lo necesites.',
     howTitle: 'Cómo funciona',
     howSteps: [
       {
         n: '1',
         title: 'Conecta',
-        body: 'MiniPay abre solo. En la web elige Privy, thirdweb o human.tech.',
+        body: 'Usa NeonPay en la web o ábrela directo en MiniPay.',
       },
       {
         n: '2',
-        title: 'Envía o recibe',
-        body: 'Paga USDC, USDT o USDm a una billetera, un nombre o un QR. Comparte el tuyo para que te paguen.',
+        title: 'Mueve dinero',
+        body: 'Guarda, envía y recibe stables de LATAM y en dólares.',
       },
       {
         n: '3',
-        title: 'Convierte cuando haga falta',
-        body: 'Cambia tokens ARS y BRL a USDT — el corredor que sí está activo hoy.',
+        title: 'Cambia cuando lo necesites',
+        body: 'Cambia pares de Ripio y Mento disponibles, incluidos wARS y wBRL hoy. wMXN viene después.',
       },
     ],
-    liveTitle: 'Hoy ya puedes',
-    liveSubtitle: 'Esto es lo que funciona después de iniciar sesión.',
+    liveTitle: 'Qué puedes hacer',
     live: [
       {
+        title: 'Guardar',
+        body: 'Stables de LATAM y en dólares.',
+      },
+      {
         title: 'Enviar',
-        body: 'USDC, USDT y USDm a una dirección, Celo Name Service o QR.',
+        body: 'A una wallet, un nombre Celo o un QR.',
       },
       {
         title: 'Recibir',
-        body: 'Muestra un QR o comparte una solicitud de pago.',
+        body: 'Comparte una dirección, un QR o una solicitud de pago.',
       },
       {
-        title: 'Convertir',
-        body: 'wARS y wBRL ↔ USDT con Textile FX.',
-      },
-      {
-        title: 'Entrar',
-        body: 'MiniPay, correo / redes, o una billetera que ya tengas.',
-      },
-      {
-        title: 'Actividad',
-        body: 'Ves envíos y swaps aunque cierres la app y vuelvas.',
-      },
-      {
-        title: 'Inglés y español',
-        body: 'Cambia el idioma cuando quieras. MiniPay usa español por defecto.',
+        title: 'Cambiar',
+        body: 'Cambia pares disponibles con liquidez integrada.',
       },
     ],
-    roadmapTitle: 'Qué sigue',
-    roadmapSubtitle: 'Hoja de ruta honesta. No vamos a simular esto en la app.',
-    later: [
-      {
-        title: 'Depositar desde Mercado Pago',
-        body: 'Pasar MXN de Mercado Pago a tu billetera como USDC. Ya puedes conectar la cuenta; el fondeo aún no está activo.',
-      },
-      {
-        title: 'Recarga con tarjeta',
-        body: 'Agregar fondos con débito o crédito.',
-      },
-      {
-        title: 'Pagar servicios en México',
-        body: 'CFE, teléfono y otros pagos — sin salir de NeonPay.',
-      },
-      {
-        title: 'Más pares de conversión',
-        body: 'Swaps entre estables, y peso mexicano cuando exista el corredor.',
-      },
-      {
-        title: 'Contactos y recibos',
-        body: 'Destinatarios guardados y un recibo para compartir después de cada envío.',
-      },
-      {
-        title: 'Verificación de identidad',
-        body: 'Chequeo opcional con Self Protocol cuando un flujo lo pida.',
-      },
-    ],
-    ctaTitle: '¿Listo para probarlo?',
-    ctaBody: 'Inicia sesión y entras a la misma app de siempre: enviar, recibir, convertir.',
+    miniPayTitle: 'También para MiniPay',
+    miniPayBody:
+      'NeonPay corre directo en MiniPay y extiende la wallet a stables de LATAM que no están nativos en la app.',
+    miniPaySpend:
+      'Cambia stables locales a dólares que MiniPay sí soporta y úsalos con la MiniPay Card.',
+    ctaTitle: 'Usa NeonPay',
+    ctaBody: 'En la web, o directo en MiniPay.',
     footer: 'Un producto de Celo MX',
     error: 'No se pudo conectar la billetera',
   },
 } as const;
 
-const LIVE_ICONS = [SendIcon, ArrowDownIcon, SwapIcon, WalletIcon, HistoryIcon, LanguageIcon];
-const LATER_ICONS = [CreditCardIcon, ArrowDownIcon, BoltIcon, SwapIcon, UserIcon, ShieldIcon];
+const LIVE_ICONS = [WalletIcon, SendIcon, ArrowDownIcon, SwapIcon];
 
 export function LandingPage() {
   const router = useRouter();
   const { user, language, setLanguage, wallet } = useApp();
   const [error, setError] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
+  // MiniPay: boot until connected, then /home; fail open to marketing UI.
+  const [miniPayBoot, setMiniPayBoot] = useState<'idle' | 'booting' | 'failed'>('idle');
   const t = COPY[language];
   const loggedIn = Boolean(user && wallet.isConnected);
 
   useEffect(() => {
-    if (wallet.isMiniPay || wallet.isConnected) {
-      router.replace('/home');
+    if (!wallet.isMiniPay) {
+      setMiniPayBoot('idle');
+      return;
     }
-  }, [wallet.isMiniPay, wallet.isConnected, router]);
+    if (loggedIn) {
+      setMiniPayBoot('idle');
+      router.replace('/home');
+      return;
+    }
+
+    setMiniPayBoot((prev) => (prev === 'failed' ? 'failed' : 'booting'));
+    const timer = window.setTimeout(() => {
+      setMiniPayBoot((prev) => (prev === 'booting' ? 'failed' : prev));
+    }, 8000);
+    return () => window.clearTimeout(timer);
+  }, [wallet.isMiniPay, loggedIn, router]);
 
   const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
     setError('');
@@ -254,11 +193,13 @@ export function LandingPage() {
         await wallet.setProvider(provider);
       }
       await waitForWalletSession(provider);
-      await wallet.connect();
       setPickerOpen(false);
+      await wallet.connect();
       router.push('/home');
     } catch (e: unknown) {
+      setPickerOpen(true);
       setError(e instanceof Error ? e.message : t.error);
+      throw e;
     }
   };
 
@@ -269,9 +210,11 @@ export function LandingPage() {
       return;
     }
     if (wallet.isMiniPay) {
+      setMiniPayBoot('booting');
       void wallet.connect()
         .then(() => router.push('/home'))
         .catch((e: unknown) => {
+          setMiniPayBoot('failed');
           setError(e instanceof Error ? e.message : t.error);
         });
       return;
@@ -279,10 +222,12 @@ export function LandingPage() {
     setPickerOpen(true);
   };
 
-  if (wallet.isMiniPay) {
+  if (wallet.isMiniPay && miniPayBoot !== 'failed' && !loggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400">Abriendo NeonPay…</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {language === 'es' ? 'Abriendo NeonPay…' : 'Opening NeonPay…'}
+        </p>
       </div>
     );
   }
@@ -331,7 +276,7 @@ export function LandingPage() {
             <Button
               variant="secondary"
               size="lg"
-              onClick={() => document.getElementById('live')?.scrollIntoView({ behavior: 'smooth' })}
+              onClick={() => document.getElementById('how')?.scrollIntoView({ behavior: 'smooth' })}
             >
               {t.seeLive}
             </Button>
@@ -367,15 +312,6 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section className="pb-16 md:pb-20 max-w-3xl mx-auto text-center">
-          <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-4">
-            {t.whatTitle}
-          </h2>
-          <p className="text-base md:text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
-            {t.whatBody}
-          </p>
-        </section>
-
         <section id="how" className="pb-16 md:pb-24 scroll-mt-24">
           <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-8 text-center">
             {t.howTitle}
@@ -395,15 +331,11 @@ export function LandingPage() {
 
         <section id="live" className="pb-16 md:pb-24 scroll-mt-24">
           <div className="text-center mb-8">
-            <Badge variant="success" size="sm" className="mb-3">
-              {language === 'en' ? 'Live' : 'Activo'}
-            </Badge>
             <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
               {t.liveTitle}
             </h2>
-            <p className="text-gray-600 dark:text-gray-300">{t.liveSubtitle}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
             {t.live.map((item, i) => {
               const LiveIcon = LIVE_ICONS[i];
               return (
@@ -421,32 +353,12 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="roadmap" className="pb-16 md:pb-24 scroll-mt-24">
-          <div className="text-center mb-8">
-            <Badge variant="warning" size="sm" className="mb-3">
-              {language === 'en' ? 'Coming later' : 'Más adelante'}
-            </Badge>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white mb-2">
-              {t.roadmapTitle}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300">{t.roadmapSubtitle}</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {t.later.map((item, i) => {
-              const LaterIcon = LATER_ICONS[i];
-              return (
-                <NeonHoverCard key={item.title} padding="lg" className="opacity-90">
-                  <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-xl inline-flex mb-3">
-                    <Icon color="gray" size="md">
-                      <LaterIcon />
-                    </Icon>
-                  </div>
-                  <h3 className="font-bold text-gray-900 dark:text-white mb-1">{item.title}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{item.body}</p>
-                </NeonHoverCard>
-              );
-            })}
-          </div>
+        <section id="minipay" className="pb-16 md:pb-24 scroll-mt-24">
+          <YieldCard
+            title={t.miniPayTitle}
+            description={t.miniPayBody}
+            detail={t.miniPaySpend}
+          />
         </section>
 
         <section className="pb-20">

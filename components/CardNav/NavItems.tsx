@@ -45,15 +45,16 @@ const LABELS = {
 } as const;
 
 export function useNavItems(): CardNavItem[] {
-  const { user, language, theme } = useApp();
+  const { user, language, theme, wallet } = useApp();
   const isDark = theme === 'dark';
   const showVerify = Boolean(user && !user.selfVerified);
+  const homeHref = wallet.isConnected ? '/home' : '/';
 
   return useMemo<CardNavItem[]>(() => {
     const t = LABELS[language];
 
     const walletLinks: CardNavLink[] = [
-      { label: t.home, href: '/home', ariaLabel: 'Go to Home' },
+      { label: t.home, href: homeHref, ariaLabel: 'Go to Home' },
       { label: t.receive, href: '/receive', ariaLabel: 'Receive Payment' },
       { label: t.transactions, href: '/transactions', ariaLabel: 'View Transactions' },
       { label: t.activity, href: '/activity', ariaLabel: 'View Activity' },
@@ -96,5 +97,5 @@ export function useNavItems(): CardNavItem[] {
         links: accountLinks,
       },
     ];
-  }, [language, isDark, showVerify]);
+  }, [language, isDark, showVerify, homeHref]);
 }

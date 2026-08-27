@@ -12,6 +12,7 @@ interface ModalProps {
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   showCloseButton?: boolean;
+  closeOnOverlay?: boolean;
   className?: string;
 }
 
@@ -22,6 +23,7 @@ export function Modal({
   children,
   size = 'md',
   showCloseButton = true,
+  closeOnOverlay = true,
   className,
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -33,7 +35,7 @@ export function Modal({
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && closeOnOverlay) onClose();
     };
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKey);
@@ -41,7 +43,7 @@ export function Modal({
       document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', onKey);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, closeOnOverlay]);
 
   if (!isOpen || !mounted) return null;
 
@@ -63,12 +65,12 @@ export function Modal({
         type="button"
         aria-label="Close dialog"
         className="fixed inset-0 bg-black/50 backdrop-blur-sm animate-fade-in border-0 cursor-default"
-        onClick={onClose}
+        onClick={closeOnOverlay ? onClose : undefined}
       />
-      <div className="relative flex min-h-full items-center justify-center p-4">
+      <div className="relative z-[201] flex min-h-full items-center justify-center p-4 pointer-events-none">
         <div
           className={cn(
-            'relative z-[201] bg-white dark:bg-gray-900 rounded-xl border-2 border-acid-lemon shadow-neon',
+            'pointer-events-auto relative z-[201] bg-white dark:bg-gray-900 rounded-xl border-2 border-acid-lemon shadow-neon',
             'max-h-[min(90vh,calc(100dvh-2rem))] overflow-y-auto',
             sizes[size],
             'w-full',

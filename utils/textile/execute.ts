@@ -77,8 +77,8 @@ export async function ensureTextileAllowance(params: {
   return hash
 }
 
-export async function sendTextileTx(
-  tx: TextileUnsignedTx,
+export async function sendUnsignedCeloTx(
+  tx: { to: string; data: string; value?: string },
   signTransaction: (tx: { from?: string; to: string; data: string; value: string }) => Promise<string>,
   from?: string,
   onHash?: (hash: string) => Promise<void>
@@ -92,4 +92,13 @@ export async function sendTextileTx(
   if (onHash) await onHash(hash)
   await waitForCeloTx(hash)
   return hash
+}
+
+export async function sendTextileTx(
+  tx: TextileUnsignedTx,
+  signTransaction: (tx: { from?: string; to: string; data: string; value: string }) => Promise<string>,
+  from?: string,
+  onHash?: (hash: string) => Promise<void>
+): Promise<string> {
+  return sendUnsignedCeloTx(tx, signTransaction, from, onHash)
 }

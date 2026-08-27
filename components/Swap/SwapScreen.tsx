@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { useToast } from '@/components/UI/Toast';
@@ -15,19 +15,35 @@ import { Progress } from '@/components/UI/Loading';
 import { Icon, SwapIcon, ArrowDownIcon } from '@/components/Icons';
 import { TEXTILE_FX_SWAP_URL } from '@/config/ripio';
 import { groupedPaymentOptions, MENTO_PAYMENT_SYMBOLS } from '@/config/tokens';
+import { cn } from '@/utils/cn';
+import {
+  fromMentoAtomic,
+  mentoCounterpart,
+  mentoNoQuoteMessage,
+  MENTO_CELO_CHAIN_ID,
+  mentoTokenAddress,
+  resolveMentoPair,
+  toMentoAtomic,
+  type MentoPair,
+  type MentoUnsignedTx,
+} from '@/utils/mento/swap';
 import {
   isBelowTextileRfqMinimum,
   isTextileQuoteTooCloseToExpiry,
-  isTextileSwapSymbol,
   resolveTextilePair,
   rfqNoQuoteMessage,
+  textileComingSoonWfiat,
   textileCounterpart,
+  textileLiveRouteLabels,
   TEXTILE_CELO_CHAIN_ID,
+  TEXTILE_DEFAULT_WFIAT,
+  TEXTILE_SWAP_SYMBOLS,
   TEXTILE_TOKEN_ADDRESSES,
   toAtomicAmount,
+  type TextileSwapSymbol,
   type TextileUnsignedTx,
 } from '@/utils/textile/fx';
-import { ensureTextileAllowance, sendTextileTx } from '@/utils/textile/execute';
+import { ensureTextileAllowance, sendTextileTx, sendUnsignedCeloTx } from '@/utils/textile/execute';
 import { createSwapIntent, updateSwapIntent } from '@/utils/intent-logging';
 import { friendlyError } from '@/utils/errors';
 import { recoverBroadcastTxHash } from '@/utils/wallet/recoverTxHash';
@@ -35,9 +51,12 @@ import { celoscanTxUrl } from '@/utils/explorer';
 import type { SwapRoute } from '@/types';
 
 type Step = 'input' | 'review' | 'processing' | 'success';
+type SwapDesk = 'mento' | 'ripio';
 
-const SWAP_TOKENS = [...MENTO_PAYMENT_SYMBOLS, 'USDT', 'wBRL', 'wARS'] as const;
-type Token = (typeof SWAP_TOKENS)[number];
+const SWAP_DESK_KEY = 'neonpay:swap-desk';
+const MENTO_SWAP_TOKENS = [...MENTO_PAYMENT_SYMBOLS, 'USDC', 'USDT'] as const;
+const RIPIO_SWAP_TOKENS = TEXTILE_SWAP_SYMBOLS;
+type Token = (typeof MENTO_SWAP_TOKENS)[number] | TextileSwapSymbol;
 
 type QuotePreview = {
   live: boolean;
@@ -58,13 +77,24 @@ type SwapBuildResponse = {
   transactions?: { swap?: TextileUnsignedTx };
 };
 
+type MentoBuildResponse = {
+  fillable?: boolean;
+  buyAmount?: string | null;
+  buyAtomic?: string;
+  hint?: string;
+  reason?: string;
+  error?: string;
+  transactions?: { approval?: MentoUnsignedTx | null; swap?: MentoUnsignedTx };
+};
+
 export function SwapScreen() {
   const router = useRouter();
   const { walletBalance, language, wallet } = useApp();
   const { showToast } = useToast();
   const [step, setStep] = useState<Step>('input');
-  const [fromToken, setFromToken] = useState<Token>('USDT');
-  const [toToken, setToToken] = useState<Token>('wBRL');
+  const [desk, setDesk] = useState<SwapDesk>('mento');
+  const [fromToken, setFromToken] = useState<Token>('USDm');
+  const [toToken, setToToken] = useState<Token>('USDC');
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [quote, setQuote] = useState<SwapRoute | null>(null);
@@ -74,11 +104,13 @@ export function SwapScreen() {
   const [executingLabel, setExecutingLabel] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [submitWarning, setSubmitWarning] = useState<string | null>(null);
+  const deskHydrated = useRef(false);
 
   const labels = {
     en: {
-      title: 'Swap Tokens',
-      subtitle: 'Textile FX is live for Ripio wARS / wBRL ↔ USDT. Mento pairs are listed separately and not available yet.',
+      title: 'Swap',
+      subtitleMento: 'Mento stables to each other, or into USDC / USDT for cash-out.',
+      subtitleRipio: 'Ripio wFIAT through Textile FX. Only live corridors are listed.',
       from: 'From',
       to: 'To',
       amount: 'Amount',
@@ -94,15 +126,22 @@ export function SwapScreen() {
       insufficientBalance: 'Insufficient balance',
       max: 'Max',
       swap: 'Swap',
-      venue: 'Textile FX RFQ',
+      venue: 'Textile FX',
+      mentoVenue: 'Mento',
+      deskMento: 'Mento',
+      deskRipio: 'Ripio',
+      deskLabel: 'Swap venue',
+      liveRoutes: 'Live now',
+      comingSoon: 'When Textile turns them on',
       minSize: 'Minimum is 1 whole sell token.',
       connectWallet: 'Connect a wallet to swap on Celo.',
       external: 'Open Textile in another wallet',
       pairUnavailable: 'This pair is not available yet.',
     },
     es: {
-      title: 'Intercambiar Tokens',
-      subtitle: 'Textile FX está activo para Ripio wARS / wBRL ↔ USDT. Los pares Mento están listados aparte y aún no están disponibles.',
+      title: 'Intercambiar',
+      subtitleMento: 'Stables de Mento entre sí, o a USDC / USDT para retirar.',
+      subtitleRipio: 'wFIAT de Ripio vía Textile FX. Solo se listan los corredores activos.',
       from: 'De',
       to: 'A',
       amount: 'Cantidad',
@@ -118,7 +157,13 @@ export function SwapScreen() {
       insufficientBalance: 'Saldo insuficiente',
       max: 'Máx',
       swap: 'Intercambiar',
-      venue: 'Textile FX RFQ',
+      venue: 'Textile FX',
+      mentoVenue: 'Mento',
+      deskMento: 'Mento',
+      deskRipio: 'Ripio',
+      deskLabel: 'Venue de intercambio',
+      liveRoutes: 'Activos ahora',
+      comingSoon: 'Cuando Textile los active',
       minSize: 'El mínimo es 1 token entero de venta.',
       connectWallet: 'Conecta una billetera para intercambiar en Celo.',
       external: 'Abrir Textile en otra billetera',
@@ -127,25 +172,67 @@ export function SwapScreen() {
   };
 
   const t = labels[language];
-  const textilePair = resolveTextilePair(fromToken, toToken);
+  const textilePair = desk === 'ripio' ? resolveTextilePair(fromToken, toToken) : null;
+  const mentoPair = desk === 'mento' ? resolveMentoPair(fromToken, toToken) : null;
+  const liveVenue = textilePair ? 'textile' : mentoPair ? 'mento' : null;
+  const tokenOptions = groupedPaymentOptions(
+    language,
+    desk === 'mento' ? MENTO_SWAP_TOKENS : RIPIO_SWAP_TOKENS
+  );
+  const liveRoutes = textileLiveRouteLabels();
+  const comingSoon = textileComingSoonWfiat();
 
-  const tokenOptions = groupedPaymentOptions(language, SWAP_TOKENS);
+  const applyDesk = (next: SwapDesk) => {
+    setDesk(next);
+    setFromAmount('');
+    setToAmount('');
+    setPreview(null);
+    setQuote(null);
+    setStep('input');
+    if (next === 'mento') {
+      setFromToken('USDm');
+      setToToken('USDC');
+    } else {
+      setFromToken('USDT');
+      setToToken(TEXTILE_DEFAULT_WFIAT);
+    }
+    try {
+      localStorage.setItem(SWAP_DESK_KEY, next);
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (deskHydrated.current) return;
+    deskHydrated.current = true;
+    try {
+      const saved = localStorage.getItem(SWAP_DESK_KEY);
+      if (saved === 'ripio') applyDesk('ripio');
+    } catch {}
+  }, []);
 
   const selectFromToken = (next: Token) => {
     setFromToken(next);
-    if (next === toToken || !resolveTextilePair(next, toToken)) {
-      if (isTextileSwapSymbol(next)) {
-        setToToken(textileCounterpart(next, toToken));
+    if (desk === 'ripio') {
+      if (next === toToken || !resolveTextilePair(next, toToken)) {
+        setToToken(textileCounterpart(next as TextileSwapSymbol, toToken));
       }
+      return;
+    }
+    if (next === toToken || !resolveMentoPair(next, toToken)) {
+      setToToken(mentoCounterpart(next, toToken) as Token);
     }
   };
 
   const selectToToken = (next: Token) => {
     setToToken(next);
-    if (next === fromToken || !resolveTextilePair(fromToken, next)) {
-      if (isTextileSwapSymbol(next)) {
-        setFromToken(textileCounterpart(next, fromToken));
+    if (desk === 'ripio') {
+      if (next === fromToken || !resolveTextilePair(fromToken, next)) {
+        setFromToken(textileCounterpart(next as TextileSwapSymbol, fromToken));
       }
+      return;
+    }
+    if (next === fromToken || !resolveMentoPair(fromToken, next)) {
+      setFromToken(mentoCounterpart(next, fromToken) as Token);
     }
   };
 
@@ -158,8 +245,9 @@ export function SwapScreen() {
         return;
       }
 
-      const pair = resolveTextilePair(fromToken, toToken);
-      if (!pair) {
+      const nextTextile = resolveTextilePair(fromToken, toToken);
+      const nextMento = nextTextile ? null : resolveMentoPair(fromToken, toToken);
+      if (!nextTextile && !nextMento) {
         setToAmount('');
         setPreview({
           live: false,
@@ -169,7 +257,7 @@ export function SwapScreen() {
         return;
       }
 
-      if (isBelowTextileRfqMinimum(fromAmount)) {
+      if (nextTextile && isBelowTextileRfqMinimum(fromAmount)) {
         setToAmount('');
         setPreview({
           live: false,
@@ -181,6 +269,46 @@ export function SwapScreen() {
 
       setQuoting(true);
       try {
+        if (nextMento) {
+          const response = await fetch('/api/mento/quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sellSymbol: fromToken,
+              buySymbol: toToken,
+              sellAmount: fromAmount,
+              address: wallet.address || undefined,
+              language,
+            }),
+          });
+          const data = (await response.json()) as {
+            status?: string
+            buyAmount?: string
+            hint?: string
+            reason?: string
+            error?: string
+          };
+          if (cancelled) return;
+          if (!response.ok) {
+            setToAmount('');
+            setPreview({ live: false, buyAmount: '', hint: data.error || t.pairUnavailable });
+            return;
+          }
+          if (data.status === 'no_quote' || !data.buyAmount) {
+            setToAmount('');
+            setPreview({
+              live: false,
+              buyAmount: '',
+              reason: data.reason,
+              hint: data.hint || mentoNoQuoteMessage(data.reason, language),
+            });
+            return;
+          }
+          setToAmount(String(data.buyAmount));
+          setPreview({ live: true, buyAmount: String(data.buyAmount), hint: data.hint });
+          return;
+        }
+
         let data: {
           status?: string
           buyAmount?: string
@@ -221,7 +349,7 @@ export function SwapScreen() {
             live: false,
             buyAmount: '',
             reason: data.reason,
-            hint: data.hint || rfqNoQuoteMessage(data.reason, language, pair.wfiat),
+            hint: data.hint || rfqNoQuoteMessage(data.reason, language, nextTextile!.wfiat),
           });
           return;
         }
@@ -242,7 +370,7 @@ export function SwapScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [fromAmount, fromToken, toToken, wallet.address, language, t.minSize]);
+  }, [fromAmount, fromToken, toToken, wallet.address, language, t.minSize, t.pairUnavailable]);
 
   const handleSwapTokens = () => {
     const temp = fromToken;
@@ -274,13 +402,14 @@ export function SwapScreen() {
 
     if (amount <= 0) return;
 
-    const pair = resolveTextilePair(fromToken, toToken);
-    if (!pair) {
+    const nextTextile = resolveTextilePair(fromToken, toToken);
+    const nextMento = nextTextile ? null : resolveMentoPair(fromToken, toToken);
+    if (!nextTextile && !nextMento) {
       showToast({ type: 'error', message: t.pairUnavailable });
       return;
     }
 
-    if (isBelowTextileRfqMinimum(fromAmount)) {
+    if (nextTextile && isBelowTextileRfqMinimum(fromAmount)) {
       showToast({
         type: 'error',
         message: preview?.hint || t.minSize,
@@ -295,23 +424,177 @@ export function SwapScreen() {
       toAmount: estimatedOut,
       rate: amount > 0 && estimatedOut > 0 ? estimatedOut / amount : 0,
       fee: 0,
-      estimatedTime: '~30 seconds',
-      route: ['Textile FX', fromToken, toToken],
+      estimatedTime: nextMento ? '~15 seconds' : '~30 seconds',
+      route: [nextMento ? 'Mento' : 'Textile FX', fromToken, toToken],
     });
     setStep('review');
   };
 
-  const handleConfirm = async () => {
-    if (!quote) return;
-    const pair = resolveTextilePair(quote.fromToken, quote.toToken);
-    if (!pair) {
-      showToast({ type: 'error', message: t.pairUnavailable });
-      return;
-    }
+  const confirmMentoSwap = async (pair: MentoPair) => {
     if (!wallet.address) {
       showToast({ type: 'error', message: t.connectWallet });
       return;
     }
+
+    const intentId = crypto.randomUUID();
+    const txHashes: string[] = [];
+    let signed = false;
+    setSubmitWarning(null);
+    setStep('processing');
+    setProgress(10);
+    setExecutingLabel(language === 'es' ? 'Registrando…' : 'Saving intent…');
+
+    try {
+      const sellAmount = toMentoAtomic(fromAmount, pair.sellSymbol);
+      await createSwapIntent({
+        intentId,
+        userAddress: wallet.address,
+        chainId: MENTO_CELO_CHAIN_ID,
+        sellToken: pair.sellSymbol,
+        buyToken: pair.buySymbol,
+        sellAmount,
+        venue: 'mento',
+      });
+
+      setProgress(35);
+      setExecutingLabel(language === 'es' ? 'Armando el swap Mento…' : 'Building Mento swap…');
+      const response = await fetch('/api/mento/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sellSymbol: pair.sellSymbol,
+          buySymbol: pair.buySymbol,
+          sellAmount: fromAmount,
+          taker: wallet.address,
+          language,
+        }),
+      });
+      const built = (await response.json()) as MentoBuildResponse;
+      if (!response.ok) {
+        throw new Error(built.error || built.hint || 'Could not build Mento swap');
+      }
+      if (!built.fillable || !built.transactions?.swap) {
+        throw new Error(built.hint || mentoNoQuoteMessage(built.reason, language));
+      }
+
+      const quotedAtomic = built.buyAtomic || (built.buyAmount
+        ? toMentoAtomic(String(built.buyAmount), pair.buySymbol)
+        : undefined);
+      await updateSwapIntent(intentId, { buyAmountQuoted: quotedAtomic });
+
+      const buyToken = mentoTokenAddress(pair.buySymbol);
+      let buyBefore: bigint | undefined;
+      try {
+        buyBefore = (await wallet.getTokenBalance(buyToken)).balance;
+      } catch {
+        buyBefore = undefined;
+      }
+
+      if (built.transactions.approval) {
+        setProgress(55);
+        setExecutingLabel(language === 'es' ? 'Aprobando el token…' : 'Approving token…');
+        const approvalTxHash = await sendUnsignedCeloTx(
+          built.transactions.approval,
+          wallet.signTransaction,
+          wallet.address
+        );
+        await updateSwapIntent(intentId, { approvalTxHash });
+      }
+
+      setProgress(75);
+      setExecutingLabel(language === 'es' ? 'Firmando el swap…' : 'Signing swap…');
+      const hash = await sendUnsignedCeloTx(
+        built.transactions.swap,
+        wallet.signTransaction,
+        wallet.address,
+        async (submittedHash) => {
+          signed = true;
+          txHashes.push(submittedHash);
+          await updateSwapIntent(intentId, {
+            status: 'submitted',
+            txHashes: [...txHashes],
+          });
+        }
+      );
+
+      let buyActual = quotedAtomic;
+      try {
+        const buyAfter = (await wallet.getTokenBalance(buyToken)).balance;
+        if (buyBefore !== undefined && buyAfter > buyBefore) {
+          buyActual = (buyAfter - buyBefore).toString();
+        }
+      } catch {
+        // keep quoted amount
+      }
+
+      await updateSwapIntent(intentId, {
+        status: 'confirmed',
+        txHashes,
+        submitOk: true,
+        buyAmountActual: buyActual,
+        error: null,
+      });
+
+      if (quotedAtomic) {
+        setQuote((current) =>
+          current
+            ? { ...current, toAmount: Number(fromMentoAtomic(quotedAtomic, pair.buySymbol)) }
+            : current
+        );
+      }
+
+      setProgress(100);
+      setTxHash(hash);
+      showToast({ type: 'success', message: t.success });
+      setStep('success');
+    } catch (err) {
+      const recovered = recoverBroadcastTxHash(err);
+      if (recovered && !txHashes.includes(recovered)) {
+        txHashes.push(recovered);
+        signed = true;
+      }
+      await updateSwapIntent(intentId, {
+        status: signed ? 'submitted' : 'failed',
+        txHashes: txHashes.length ? txHashes : undefined,
+        error: signed ? null : err instanceof Error ? err.message : 'Swap failed',
+      }).catch(() => undefined);
+      if (signed && txHashes[0]) {
+        setTxHash(txHashes[0]);
+        setSubmitWarning(
+          language === 'es'
+            ? 'La transacción se envió. Ábrela en el historial si esta pantalla no confirma.'
+            : 'The transaction was sent. Check history if this screen does not confirm.'
+        );
+        setProgress(100);
+        setStep('success');
+        return;
+      }
+      showToast({
+        type: 'error',
+        message: friendlyError(err, language, 'swap'),
+      });
+      setStep('review');
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!quote) return;
+    if (!wallet.address) {
+      showToast({ type: 'error', message: t.connectWallet });
+      return;
+    }
+
+    const pair = resolveTextilePair(quote.fromToken, quote.toToken);
+    const nextMento = pair ? null : resolveMentoPair(quote.fromToken, quote.toToken);
+    if (!pair && !nextMento) {
+      showToast({ type: 'error', message: t.pairUnavailable });
+      return;
+    }
+    if (nextMento) {
+      await confirmMentoSwap(nextMento);
+      return;
+    }
+    if (!pair) return;
 
     const intentId = crypto.randomUUID();
     const txHashes: string[] = [];
@@ -537,8 +820,9 @@ export function SwapScreen() {
     parseFloat(fromAmount) <= 0 ||
     parseFloat(fromAmount) > fromBalance ||
     quoting ||
-    !textilePair ||
-    isBelowTextileRfqMinimum(fromAmount);
+    !liveVenue ||
+    !preview?.live ||
+    (textilePair ? isBelowTextileRfqMinimum(fromAmount) : false);
 
   return (
     <Container>
@@ -547,12 +831,54 @@ export function SwapScreen() {
 
         <Card padding="lg" className="max-w-md mx-auto">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.title}</h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-6">{t.subtitle}</p>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            {desk === 'mento' ? t.subtitleMento : t.subtitleRipio}
+          </p>
 
           {step === 'input' && (
             <div className="space-y-4">
-              {textilePair && (
-                <Badge variant="info" size="sm">{t.venue}</Badge>
+              <div
+                className="inline-flex w-full rounded-full border border-gray-200/70 dark:border-gray-700/70 bg-white/60 dark:bg-gray-900/40 p-1"
+                role="tablist"
+                aria-label={t.deskLabel}
+              >
+                {([
+                  { id: 'mento' as const, label: t.deskMento },
+                  { id: 'ripio' as const, label: t.deskRipio },
+                ]).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={desk === tab.id}
+                    onClick={() => applyDesk(tab.id)}
+                    className={cn(
+                      'flex-1 px-3.5 py-1.5 text-base font-display tracking-wide rounded-full transition-all',
+                      desk === tab.id
+                        ? 'bg-acid-lemon text-gray-900 shadow-acid'
+                        : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white'
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <Badge variant="info" size="sm">
+                {desk === 'mento' ? t.mentoVenue : t.venue}
+              </Badge>
+              {desk === 'ripio' && (
+                <div className="rounded-xl border border-gray-200/70 dark:border-gray-700/70 bg-white/40 dark:bg-gray-900/30 px-3 py-2.5 text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                  <p>
+                    <span className="font-medium text-gray-800 dark:text-gray-100">{t.liveRoutes}:</span>{' '}
+                    {liveRoutes.join(', ')}
+                  </p>
+                  {comingSoon.length > 0 && (
+                    <p>
+                      <span className="font-medium text-gray-800 dark:text-gray-100">{t.comingSoon}:</span>{' '}
+                      {comingSoon.join(', ')}
+                    </p>
+                  )}
+                </div>
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.from}</label>

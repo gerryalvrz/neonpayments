@@ -186,6 +186,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const id = user?.id || user?.walletAddress || '';
     const key = id ? `self_verified:${id}` : '';
     if (!key) return;
+
+    let cancelled = false;
+
     try {
       const val = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
       if (val === 'true') {
@@ -193,6 +196,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setUser(prev => (prev ? { ...prev, selfVerified: true } : prev));
       }
     } catch {}
+
+    // Confirm against SelfAgeVerifier when possible (source of truth on Celo Sepolia).
+    void (async () => {
+      try {
+        const { isSelfVerifiedOnchain } = await import('@/utils/self/onchain');
+        const onchain = await isSelfVerifiedOnchain(id);
+        if (cancelled || !onchain) return;
+        try {
+          localStorage.setItem(key, 'true');
+        } catch {}
+        setSelfVerification({ verified: true });
+        setUser(prev => (prev ? { ...prev, selfVerified: true } : prev));
+      } catch {
+        /* offline / RPC — keep localStorage result */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, user?.walletAddress]);
 
   const addTransaction = useCallback((transaction: Transaction) => {

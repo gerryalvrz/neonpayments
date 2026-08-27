@@ -5,7 +5,12 @@
 
 import { formatUnits, parseUnits } from 'ethers'
 import { CELO_USDT } from '@/config/tokens'
-import { RIPIO_WFIAT_TOKENS } from '@/config/ripio'
+import {
+  RIPIO_WFIAT_DECIMALS,
+  RIPIO_WFIAT_TOKENS,
+  TEXTILE_FX_CORRIDORS,
+  type RipioWfiatSymbol,
+} from '@/config/ripio'
 
 export const TEXTILE_CELO_CHAIN_ID = 42220
 export const TEXTILE_API_BASE = 'https://api.textilecredit.com/v2'
@@ -13,20 +18,24 @@ export const TEXTILE_RFQ_MIN_WHOLE_TOKENS = 1
 export const TEXTILE_RFQ_EXECUTE_BUFFER_MS = 8_000
 export const TEXTILE_LIMIT_ORDER_REACTOR = '0xa9AA0a64769cBed4d3B1Ceb4Df01CdE915C235b3'
 
-export const TEXTILE_SWAP_SYMBOLS = ['wARS', 'wBRL', 'USDT'] as const
-export type TextileSwapSymbol = (typeof TEXTILE_SWAP_SYMBOLS)[number]
-export type TextileWfiatLeg = 'wARS' | 'wBRL'
+/** Live Ripio legs. Adding a symbol to TEXTILE_FX_CORRIDORS turns the pair on here. */
+export const TEXTILE_LIVE_WFIAT = [...TEXTILE_FX_CORRIDORS] as RipioWfiatSymbol[]
+export type TextileWfiatLeg = RipioWfiatSymbol
+export type TextileSwapSymbol = 'USDT' | TextileWfiatLeg
 
-export const TEXTILE_TOKEN_DECIMALS: Record<TextileSwapSymbol, number> = {
-  wARS: 18,
-  wBRL: 18,
+export const TEXTILE_SWAP_SYMBOLS: TextileSwapSymbol[] = ['USDT', ...TEXTILE_LIVE_WFIAT]
+export const TEXTILE_DEFAULT_WFIAT: TextileWfiatLeg = TEXTILE_FX_CORRIDORS.has('wBRL')
+  ? 'wBRL'
+  : TEXTILE_LIVE_WFIAT[0]
+
+export const TEXTILE_TOKEN_DECIMALS: Record<string, number> = {
   USDT: 6,
+  ...Object.fromEntries(TEXTILE_LIVE_WFIAT.map((symbol) => [symbol, RIPIO_WFIAT_DECIMALS])),
 }
 
-export const TEXTILE_TOKEN_ADDRESSES: Record<TextileSwapSymbol, string> = {
-  wARS: RIPIO_WFIAT_TOKENS.wARS,
-  wBRL: RIPIO_WFIAT_TOKENS.wBRL,
+export const TEXTILE_TOKEN_ADDRESSES: Record<string, string> = {
   USDT: CELO_USDT,
+  ...Object.fromEntries(TEXTILE_LIVE_WFIAT.map((symbol) => [symbol, RIPIO_WFIAT_TOKENS[symbol]])),
 }
 
 export type TextileUnsignedTx = {
@@ -36,12 +45,22 @@ export type TextileUnsignedTx = {
   chainId: number
 }
 
-export function isTextileSwapSymbol(value: string): value is TextileSwapSymbol {
-  return (TEXTILE_SWAP_SYMBOLS as readonly string[]).includes(value)
+export function isTextileWfiatLeg(value: string): value is TextileWfiatLeg {
+  return TEXTILE_FX_CORRIDORS.has(value as RipioWfiatSymbol)
 }
 
-export function isTextileWfiatLeg(value: string): value is TextileWfiatLeg {
-  return value === 'wARS' || value === 'wBRL'
+export function isTextileSwapSymbol(value: string): value is TextileSwapSymbol {
+  return value === 'USDT' || isTextileWfiatLeg(value)
+}
+
+export function textileComingSoonWfiat(): RipioWfiatSymbol[] {
+  return (Object.keys(RIPIO_WFIAT_TOKENS) as RipioWfiatSymbol[]).filter(
+    (symbol) => !TEXTILE_FX_CORRIDORS.has(symbol)
+  )
+}
+
+export function textileLiveRouteLabels(): string[] {
+  return TEXTILE_LIVE_WFIAT.map((symbol) => `USDT ↔ ${symbol}`)
 }
 
 export function textileCounterpart(
@@ -49,7 +68,7 @@ export function textileCounterpart(
   other: string
 ): TextileSwapSymbol {
   if (selected === 'USDT') {
-    return isTextileWfiatLeg(other) ? other : 'wBRL'
+    return isTextileWfiatLeg(other) ? other : TEXTILE_DEFAULT_WFIAT
   }
   return 'USDT'
 }

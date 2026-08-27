@@ -100,18 +100,40 @@ export class WaapProvider implements WalletProvider {
 
   async disconnect(): Promise<void> {
     const session = this.session || getWalletSession();
-    if (session?.providerType === 'waap') {
-      await session.logout();
-    } else {
-      const waap = getWindowWaap();
-      if (waap?.logout) {
-        await waap.logout();
+    try {
+      const logout = session?.providerType === 'waap'
+        ? session.logout()
+        : getWindowWaap()?.logout?.();
+      if (logout) {
+        await Promise.race([
+          logout,
+          new Promise<void>((resolve) => {
+            setTimeout(resolve, 2500);
+          }),
+        ]);
       }
+    } catch {
+      // Injected wallets may reject logout; local session is still cleared.
     }
     this.account = null;
   }
 
   async getAccount(): Promise<WalletAccount | null> {
+    const session = this.session || getWalletSession();
+    if (!session || session.providerType !== 'waap' || !session.authenticated) {
+      this.account = null;
+      return null;
+    }
+
+    if (session.address) {
+      this.account = {
+        address: session.address,
+        isConnected: true,
+        chainId: session.chainId || getWalletEmbedConfig().chain.id,
+      };
+      return this.account;
+    }
+
     try {
       const eip1193 = this.getEip1193();
       const accounts = (await eip1193.request({

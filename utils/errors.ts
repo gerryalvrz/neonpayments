@@ -66,6 +66,18 @@ export function friendlyError(
       : 'Firm quote expired (~30s). Confirm again.'
   }
 
+  if (lower.includes('no route found') || lower.includes('does not have a route')) {
+    return es
+      ? 'Mento aún no tiene una ruta para este par.'
+      : 'Mento does not have a route for this pair yet.'
+  }
+
+  if (lower.includes('circuit breaker') || lower.includes('not_tradable') || lower.includes('en pausa')) {
+    return es
+      ? 'Mento tiene este par en pausa. Intenta de nuevo más tarde.'
+      : 'Mento has this pair paused. Try again later.'
+  }
+
   if (
     lower.includes('no_makers') ||
     lower.includes('no_quote') ||

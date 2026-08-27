@@ -98,39 +98,31 @@ class WalletSdkErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 
   render() {
     if (this.state.failed) {
-      const fallback = getDefaultStandaloneProvider();
-      if (fallback === 'thirdweb') {
-        return <ThirdwebProviderWrapper>{this.props.children}</ThirdwebProviderWrapper>;
-      }
-      if (fallback === 'waap') {
-        return <WaapProviderWrapper>{this.props.children}</WaapProviderWrapper>;
-      }
-      return <PrivyProviderWrapper>{this.props.children}</PrivyProviderWrapper>;
+      return <SdkForProvider provider={getDefaultStandaloneProvider()} />;
     }
     return this.props.children;
   }
 }
 
-function SdkForProvider({
-  provider,
-  children,
-}: {
-  provider: StandaloneWalletProviderType;
-  children: ReactNode;
-}) {
+/**
+ * Vendor SDKs must stay *beside* the app tree, not wrap it.
+ * Wrapping children remounts LandingPage / AppProvider on every provider
+ * switch, which closes the picker and can fire the previous vendor's login.
+ */
+function SdkForProvider({ provider }: { provider: StandaloneWalletProviderType }) {
   const enabled = getWalletEmbedConfig().enabledProviders;
   const selected = enabled.includes(provider) ? provider : getDefaultStandaloneProvider();
 
   let sdk: ReactNode;
   if (selected === 'thirdweb') {
-    sdk = <ThirdwebProviderWrapper>{children}</ThirdwebProviderWrapper>;
+    sdk = <ThirdwebProviderWrapper>{null}</ThirdwebProviderWrapper>;
   } else if (selected === 'waap') {
-    sdk = <WaapProviderWrapper>{children}</WaapProviderWrapper>;
+    sdk = <WaapProviderWrapper>{null}</WaapProviderWrapper>;
   } else {
-    sdk = <PrivyProviderWrapper>{children}</PrivyProviderWrapper>;
+    sdk = <PrivyProviderWrapper>{null}</PrivyProviderWrapper>;
   }
 
-  return <Suspense fallback={<>{children}</>}>{sdk}</Suspense>;
+  return <Suspense fallback={null}>{sdk}</Suspense>;
 }
 
 export function WalletSdkShell({ children }: { children: ReactNode }) {
@@ -161,17 +153,16 @@ export function WalletSdkShell({ children }: { children: ReactNode }) {
     }
   };
 
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
-  if (isMiniPay) {
-    return <>{children}</>;
-  }
+  const showSdk = mounted && !isMiniPay;
 
   return (
-    <WalletSdkErrorBoundary provider={selected} onChunkError={handleChunkError}>
-      <SdkForProvider provider={selected}>{children}</SdkForProvider>
-    </WalletSdkErrorBoundary>
+    <>
+      {showSdk ? (
+        <WalletSdkErrorBoundary provider={selected} onChunkError={handleChunkError}>
+          <SdkForProvider provider={selected} />
+        </WalletSdkErrorBoundary>
+      ) : null}
+      {children}
+    </>
   );
 }

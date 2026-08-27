@@ -26,6 +26,43 @@ function getWaap(): WaapProviderApi | undefined {
   return (window as Window & { waap?: WaapProviderApi }).waap;
 }
 
+function appSessionKey() {
+  return `${getWalletEmbedConfig().namespace}.waapAppSession`;
+}
+
+function readAppSession(): 'open' | 'closed' | 'unknown' {
+  try {
+    const value = localStorage.getItem(appSessionKey());
+    if (value === '1') return 'open';
+    if (value === '0') return 'closed';
+  } catch {
+    // ignore
+  }
+  return 'unknown';
+}
+
+function writeAppSession(open: boolean) {
+  try {
+    localStorage.setItem(appSessionKey(), open ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
+
+async function settle(task: Promise<unknown> | undefined, ms = 2500) {
+  if (!task) return;
+  try {
+    await Promise.race([
+      task,
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, ms);
+      }),
+    ]);
+  } catch {
+    // Injected wallets (Rabby, MetaMask) often reject or hang on logout.
+  }
+}
+
 async function ensureConfiguredChain(waap: WaapProviderApi): Promise<void> {
   const { chain } = getWalletEmbedConfig();
   const chainIdHex = getChainIdHex();
@@ -59,6 +96,8 @@ async function ensureConfiguredChain(waap: WaapProviderApi): Promise<void> {
 function WaapWalletBridge({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const initOnce = useRef(false);
+  const sessionClosedRef = useRef(readAppSession() === 'closed');
+  const publishRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     if (initOnce.current) return;
@@ -72,9 +111,7 @@ function WaapWalletBridge({ children }: { children: ReactNode }) {
 
         const authenticationMethods: Array<
           'email' | 'phone' | 'social' | 'biometrics' | 'wallet'
-        > = walletConnectProjectId
-          ? ['email', 'phone', 'social', 'biometrics', 'wallet']
-          : ['email', 'phone', 'social', 'biometrics'];
+        > = ['email', 'phone', 'social', 'biometrics', 'wallet'];
 
         waapSdk.initWaaP({
           useStaging: Boolean(config.credentials.waap?.useStaging),
@@ -147,13 +184,27 @@ function WaapWalletBridge({ children }: { children: ReactNode }) {
     if (!accounts?.length) {
       throw new Error('No accounts returned from human.tech');
     }
+
+    sessionClosedRef.current = false;
+    writeAppSession(true);
+    await publishRef.current();
   }, []);
 
   const logout = useCallback(async () => {
+    sessionClosedRef.current = true;
+    writeAppSession(false);
+
     const waap = getWaap();
-    if (waap?.logout) {
-      await waap.logout();
-    }
+    await Promise.all([
+      settle(waap?.logout?.()),
+      settle(
+        waap?.request?.({
+          method: 'wallet_revokePermissions',
+          params: [{ eth_accounts: {} }],
+        })
+      ),
+    ]);
+    await publishRef.current();
   }, []);
 
   useEffect(() => {
@@ -165,16 +216,19 @@ function WaapWalletBridge({ children }: { children: ReactNode }) {
 
     const publish = async () => {
       const eip1193 = getWaap() || null;
+      const closed = sessionClosedRef.current || readAppSession() === 'closed';
       let address: string | null = null;
-      try {
-        if (eip1193?.request) {
-          const accounts = (await eip1193.request({
-            method: 'eth_accounts',
-          })) as string[];
-          address = accounts?.[0] || null;
+      if (!closed) {
+        try {
+          if (eip1193?.request) {
+            const accounts = (await eip1193.request({
+              method: 'eth_accounts',
+            })) as string[];
+            address = accounts?.[0] || null;
+          }
+        } catch {
+          address = null;
         }
-      } catch {
-        address = null;
       }
 
       if (cancelled) return;
@@ -190,6 +244,7 @@ function WaapWalletBridge({ children }: { children: ReactNode }) {
         eip1193,
       });
     };
+    publishRef.current = publish;
 
     void publish();
 

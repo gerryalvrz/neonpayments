@@ -205,8 +205,9 @@ const CardNav: React.FC<CardNavProps> = ({
   };
 
   const handleLogoClick = () => {
-    if (pathname !== '/home') {
-      router.push('/home');
+    const homeHref = wallet.isConnected ? '/home' : '/';
+    if (pathname !== homeHref) {
+      router.push(homeHref);
     }
     // Close menu if open
     if (isExpanded) {
@@ -231,13 +232,19 @@ const CardNav: React.FC<CardNavProps> = ({
   };
 
   const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
-    if (provider !== wallet.selectedProvider) {
-      await wallet.setProvider(provider);
+    try {
+      if (provider !== wallet.selectedProvider) {
+        await wallet.setProvider(provider);
+      }
+      await waitForWalletSession(provider);
+      setPickerOpen(false);
+      await wallet.connect();
+      closeMenuIfOpen();
+      router.push('/home');
+    } catch (error) {
+      setPickerOpen(true);
+      throw error;
     }
-    await waitForWalletSession(provider);
-    await wallet.connect();
-    closeMenuIfOpen();
-    router.push('/home');
   };
 
   const handleGetStarted = async () => {

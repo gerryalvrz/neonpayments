@@ -10,9 +10,6 @@ import { Button } from '@/components/UI/Button';
 import { Badge } from '@/components/UI/Badge';
 import { Modal } from '@/components/UI/Modal';
 import { Icon, CreditCardIcon, WalletIcon, SendIcon, CheckCircleIcon, ArrowDownIcon, SwapIcon, HistoryIcon, BellIcon, SettingsIcon, QRIcon } from '@/components/Icons';
-import { ProviderPickerModal } from '@/components/Wallet/ProviderPickerModal';
-import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
-import { waitForWalletSession } from '@/utils/wallet/waitForSession';
 import { previewFeaturesEnabled } from '@/utils/preview';
 import { useActivity } from '@/utils/useActivity';
 import { activityToTransaction } from '@/utils/activity';
@@ -43,8 +40,6 @@ function parseVisibleTokens(raw: string | null): PaymentSymbol[] {
 export function HomeScreen() {
   const router = useRouter();
   const { user, mercadoPago, walletBalance, notifications, language, wallet } = useApp();
-  const [error, setError] = useState('');
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [tokenFamily, setTokenFamily] = useState<DashboardTokenFamily>('all');
   const [visibleTokens, setVisibleTokens] = useState<PaymentSymbol[]>(() => defaultVisiblePaymentSymbols());
   const [pickerTokensOpen, setPickerTokensOpen] = useState(false);
@@ -59,6 +54,20 @@ export function HomeScreen() {
       setVisibleTokens(parseVisibleTokens(localStorage.getItem(DASHBOARD_VISIBLE_KEY)));
     } catch {}
   }, []);
+
+  // /home is logged-in only. Wait briefly for wallet→user sync or in-flight
+  // connect, then always escape to landing so we never stick on "Abriendo…".
+  useEffect(() => {
+    if (user) return;
+
+    const graceMs =
+      wallet.isConnected || wallet.isConnecting || wallet.isMiniPay ? 8000 : 50;
+    const timer = window.setTimeout(() => {
+      router.replace('/');
+    }, graceMs);
+
+    return () => window.clearTimeout(timer);
+  }, [user, wallet.isConnected, wallet.isConnecting, wallet.isMiniPay, router]);
 
   const selectTokenFamily = (next: DashboardTokenFamily) => {
     setTokenFamily(next);
@@ -185,59 +194,19 @@ export function HomeScreen() {
     { id: 'ripio', label: t.ripio },
   ];
 
-  const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
-    setError('');
-    if (provider !== wallet.selectedProvider) {
-      await wallet.setProvider(provider);
-    }
-    await waitForWalletSession(provider);
-    await wallet.connect();
-  };
-
   if (!user) {
     return (
-      <Container>
-        <div className="min-h-screen flex items-center justify-center py-12">
-          <Card padding="lg" className="max-w-md w-full text-center">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{t.title}</h1>
-            <p className="text-gray-600 dark:text-gray-300 mb-3">{t.subtitle}</p>
-            {error && (
-              <div className="mb-3 text-sm text-semantic-error">{error}</div>
-            )}
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              fullWidth
-              onClick={() => {
-                setError('');
-                if (wallet.isMiniPay) {
-                  void wallet.connect().catch((e: any) => {
-                    setError(e?.message || 'Failed to connect wallet');
-                  });
-                  return;
-                }
-                setPickerOpen(true);
-              }}
-              loading={wallet.isConnecting}
-              disabled={wallet.isConnecting}
-            >
-              <Icon>
-                <WalletIcon />
-              </Icon>
-              {t.connectWallet}
-            </Button>
-          </Card>
-        </div>
-        <ProviderPickerModal
-          isOpen={pickerOpen}
-          onClose={() => setPickerOpen(false)}
-          selected={wallet.selectedProvider}
-          language={language}
-          connecting={wallet.isConnecting}
-          onSelect={handleProviderSelect}
-        />
-      </Container>
+      <div className="min-h-[40vh] flex items-center justify-center">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {wallet.isConnected || wallet.isConnecting || wallet.isMiniPay
+            ? language === 'es'
+              ? 'Abriendo NeonPay…'
+              : 'Opening NeonPay…'
+            : language === 'es'
+              ? 'Ir al inicio…'
+              : 'Going to home…'}
+        </p>
+      </div>
     );
   }
 
