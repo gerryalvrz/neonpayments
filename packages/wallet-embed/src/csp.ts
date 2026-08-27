@@ -27,8 +27,6 @@ const PRIVY = {
     'wss://www.walletlink.org',
     'https://*.rpc.privy.systems',
     'https://explorer-api.walletconnect.com',
-    'https://*.walletconnect.com',
-    'https://*.walletconnect.org',
   ],
 };
 

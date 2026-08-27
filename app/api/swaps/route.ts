@@ -68,8 +68,7 @@ export async function POST(request: Request) {
 
     const userAddress = requireAddress(body.userAddress, 'user address')
     const chainId = body.chainId || CELO_CHAIN_ID
-    const venue =
-      body.venue === 'squid' || body.venue === 'mento' ? body.venue : 'textile'
+    const venue = body.venue === 'squid' ? 'squid' : 'textile'
 
     await ensureLedgerTables()
     const sql = getSql()

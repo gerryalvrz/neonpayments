@@ -10,7 +10,7 @@ import { JsonRpcProvider, Contract } from 'ethers';
 import { getWalletEmbedConfig } from '../config';
 import { getEnvironment } from '../detection';
 import { ERC20_ABI, encodeTransfer } from '../erc20';
-import { getProviderByType, getWalletProvider } from '../providers';
+import { getWalletProvider } from '../providers';
 import { sendWalletTransaction } from '../recoverTxHash';
 import {
   getSelectedStandaloneProvider,
@@ -89,8 +89,7 @@ export function useWallet() {
   }, [checkConnection, provider]);
 
   const connect = useCallback(async () => {
-    const p = getWalletProvider();
-    providerRef.current = p;
+    const p = providerRef.current;
     if (!p) {
       setState((prev) => ({
         ...prev,
@@ -122,26 +121,24 @@ export function useWallet() {
   }, []);
 
   const disconnect = useCallback(async () => {
-    const p = getWalletProvider() || providerRef.current;
-    providerRef.current = p;
+    const p = providerRef.current;
+    if (!p) return;
+
     try {
-      if (p) await p.disconnect();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
+      await p.disconnect();
       setState((prev) => ({
         ...prev,
         account: null,
         isConnecting: false,
+        error: null,
+      }));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      setState((prev) => ({
+        ...prev,
         error: message,
       }));
-      return;
     }
-    setState((prev) => ({
-      ...prev,
-      account: null,
-      isConnecting: false,
-      error: null,
-    }));
   }, []);
 
   useEffect(() => {
@@ -183,7 +180,6 @@ export function useWallet() {
 
       setSelectedStandaloneProvider(next);
       setStandaloneChoice(next);
-      providerRef.current = getProviderByType(next);
       setState((prev) => ({
         ...prev,
         provider: next,

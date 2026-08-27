@@ -11,16 +11,16 @@ import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
 
 const DESCRIPTIONS: Record<StandaloneWalletProviderType, { en: string; es: string }> = {
   privy: {
-    en: 'Email, SMS, passkey, or connect your own wallet',
-    es: 'Email, SMS, passkey, o conecta tu propia billetera',
+    en: 'Email or SMS login with an embedded wallet',
+    es: 'Inicio con email o SMS y billetera integrada',
   },
   thirdweb: {
-    en: 'Email, social, or connect MetaMask / WalletConnect',
-    es: 'Email, redes, o conecta MetaMask / WalletConnect',
+    en: 'In-app wallet via thirdweb (email, phone, social)',
+    es: 'Billetera in-app con thirdweb (email, teléfono, social)',
   },
   waap: {
-    en: 'Email, social, or connect your own wallet',
-    es: 'Email, redes, o conecta tu propia billetera',
+    en: 'human.tech Wallet as a Protocol (EIP-1193)',
+    es: 'human.tech Wallet as a Protocol (EIP-1193)',
   },
 };
 
@@ -56,25 +56,15 @@ export function ProviderPickerModal({
     try {
       await onSelect(provider);
       onClose();
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : '';
-      setError(message || (language === 'es' ? 'Error al conectar' : 'Failed to connect'));
+    } catch (e: any) {
+      setError(e?.message || (language === 'es' ? 'Error al conectar' : 'Failed to connect'));
     } finally {
       setPending(null);
     }
   };
 
-  const busy = connecting || pending !== null;
-
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-      size="sm"
-      closeOnOverlay={!busy}
-      showCloseButton={!busy}
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{subtitle}</p>
       {error && <div className="mb-3 text-sm text-semantic-error">{error}</div>}
       <div className="space-y-2">
@@ -85,7 +75,7 @@ export function ProviderPickerModal({
             <button
               key={provider}
               type="button"
-              disabled={busy}
+              disabled={loading}
               onClick={() => handleSelect(provider)}
               className={`w-full text-left rounded-xl border-2 p-4 transition-colors ${
                 active
@@ -102,22 +92,18 @@ export function ProviderPickerModal({
                     {DESCRIPTIONS[provider][language]}
                   </p>
                 </div>
-                  {loading ? (
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
-                      {language === 'es' ? 'Conectando…' : 'Connecting…'}
-                    </span>
-                  ) : active ? (
-                    <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
-                      {language === 'es' ? 'Actual' : 'Current'}
-                    </span>
-                  ) : null}
+                {active && (
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
+                    {language === 'es' ? 'Actual' : 'Current'}
+                  </span>
+                )}
               </div>
             </button>
           );
         })}
       </div>
       <div className="mt-4">
-        <Button variant="secondary" size="md" fullWidth onClick={onClose} disabled={busy}>
+        <Button variant="secondary" size="md" fullWidth onClick={onClose} disabled={!!pending}>
           {language === 'es' ? 'Cancelar' : 'Cancel'}
         </Button>
       </div>

@@ -5,7 +5,7 @@ export type SwapIntentCreate = {
   sellToken: string
   buyToken: string
   sellAmount: string
-  venue?: 'textile' | 'mento' | 'squid'
+  venue?: 'textile' | 'squid'
 }
 
 export type SwapIntentUpdate = {

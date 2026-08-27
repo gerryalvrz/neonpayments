@@ -39,8 +39,6 @@ const contentSecurityPolicy = [
     'wss://www.walletlink.org',
     'https://*.rpc.privy.systems',
     'https://explorer-api.walletconnect.com',
-    'https://*.walletconnect.com',
-    'https://*.walletconnect.org',
     // thirdweb
     'https://*.thirdweb.com',
     'https://thirdweb.com',

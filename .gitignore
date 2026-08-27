@@ -39,7 +39,6 @@ yarn-error.log*
 # Vendor libraries (forge installs), not tracked
 /lib/self/
 /lib/forge-std/
-/lib/openzeppelin-contracts/
 
 
 # vercel

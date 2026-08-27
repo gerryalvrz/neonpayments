@@ -9,4 +9,3 @@ export { Select } from './Select';
 export { Tabs } from './Tabs';
 export { ThemeToggle } from './ThemeToggle';
 export { QRScanner } from './QRScanner';
-export { YieldCard } from './yield-card';

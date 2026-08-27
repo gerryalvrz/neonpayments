@@ -2,7 +2,7 @@ import postgres from 'postgres'
 import { isValidCeloAddress } from '@/config/ripio'
 
 export type LedgerStatus = 'created' | 'submitted' | 'confirmed' | 'failed'
-export type SwapVenue = 'textile' | 'mento' | 'squid'
+export type SwapVenue = 'textile' | 'squid'
 
 type GlobalSql = {
   neonpaySql?: postgres.Sql

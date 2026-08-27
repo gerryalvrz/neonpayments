@@ -15,7 +15,7 @@ import {
 } from 'thirdweb/react';
 import { createThirdwebClient } from 'thirdweb';
 import { defineChain } from 'thirdweb/chains';
-import { createWallet, inAppWallet, walletConnect, EIP1193 } from 'thirdweb/wallets';
+import { inAppWallet, EIP1193 } from 'thirdweb/wallets';
 import { getWalletEmbedConfig } from '../config';
 import { setWalletSession } from '../session';
 import type { Eip1193Provider } from '../types';
@@ -63,33 +63,15 @@ function ThirdwebWalletBridge({ children }: { children: ReactNode }) {
   }, [wallet, chain, client, embedChain]);
 
   const login = useCallback(async () => {
-    const { appName, loginTitle, credentials: creds } = getWalletEmbedConfig();
-    const walletConnectProjectId = creds.waap?.walletConnectProjectId;
     await connect({
       client,
       chain: embedChain,
-      theme: 'light',
-      title: loginTitle,
-      appMetadata: {
-        name: appName,
-        url: typeof window !== 'undefined' ? window.location.origin : '',
-      },
-      walletConnect: walletConnectProjectId
-        ? { projectId: walletConnectProjectId }
-        : undefined,
       wallets: [
         inAppWallet({
           auth: {
             options: ['email', 'phone', 'google', 'apple', 'passkey'],
           },
         }),
-        createWallet('io.metamask'),
-        createWallet('com.coinbase.wallet'),
-        createWallet('me.rainbow'),
-        createWallet('io.rabby'),
-        createWallet('com.valoraapp'),
-        createWallet('com.trustwallet.app'),
-        walletConnect(),
       ],
     });
   }, [connect, client, embedChain]);

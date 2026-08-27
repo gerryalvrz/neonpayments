@@ -20,7 +20,6 @@ const config: WalletEmbedConfigInput = {
   credentials: {
     privy: {
       appId: process.env.NEXT_PUBLIC_PRIVY_APP_ID || '',
-      loginMethods: ['email', 'sms', 'wallet', 'passkey'],
     },
     thirdweb: {
       clientId: process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID || '',

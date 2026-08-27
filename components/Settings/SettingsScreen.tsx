@@ -146,17 +146,11 @@ export function SettingsScreen() {
   };
 
   const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
-    try {
-      if (provider !== wallet.selectedProvider) {
-        await wallet.setProvider(provider);
-      }
-      await waitForWalletSession(provider);
-      setPickerOpen(false);
-      await wallet.connect();
-    } catch (error) {
-      setPickerOpen(true);
-      throw error;
+    if (provider !== wallet.selectedProvider) {
+      await wallet.setProvider(provider);
     }
+    await waitForWalletSession(provider);
+    await wallet.connect();
   };
 
   const toggleNotification = (key: keyof typeof settings.notifications) => {

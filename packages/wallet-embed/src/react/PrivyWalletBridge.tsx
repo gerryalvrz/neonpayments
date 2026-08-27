@@ -19,17 +19,16 @@ export function PrivyWalletBridge({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const publish = async () => {
-      const injected = wallets.find((w) => w.walletClientType !== 'privy');
-      const embedded = wallets.find((w) => w.walletClientType === 'privy');
-      const active = injected || embedded || wallets[0];
+      const embedded =
+        wallets.find((w) => w.walletClientType === 'privy') || wallets[0];
       const address =
-        active?.address ||
+        embedded?.address ||
         (user as { wallet?: { address?: string } } | null)?.wallet?.address ||
         null;
 
-      if (active?.getEthereumProvider) {
+      if (embedded?.getEthereumProvider) {
         try {
-          const provider = (await active.getEthereumProvider()) as Eip1193Provider;
+          const provider = (await embedded.getEthereumProvider()) as Eip1193Provider;
           if (!cancelled) {
             eip1193Ref.current = provider;
           }
