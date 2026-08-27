@@ -163,27 +163,15 @@ export function LandingPage() {
   const { user, language, setLanguage, wallet } = useApp();
   const [error, setError] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
-  // MiniPay: boot until connected, then /home; fail open to marketing UI.
-  const [miniPayBoot, setMiniPayBoot] = useState<'idle' | 'booting' | 'failed'>('idle');
   const t = COPY[language];
   const loggedIn = Boolean(user && wallet.isConnected);
 
+  // MiniPay: keep the marketing page visible while the wallet auto-connects.
+  // Only leave once we actually have a session — never blank the page.
   useEffect(() => {
-    if (!wallet.isMiniPay) {
-      setMiniPayBoot('idle');
-      return;
-    }
-    if (loggedIn) {
-      setMiniPayBoot('idle');
+    if (wallet.isMiniPay && loggedIn) {
       router.replace('/home');
-      return;
     }
-
-    setMiniPayBoot((prev) => (prev === 'failed' ? 'failed' : 'booting'));
-    const timer = window.setTimeout(() => {
-      setMiniPayBoot((prev) => (prev === 'booting' ? 'failed' : prev));
-    }, 8000);
-    return () => window.clearTimeout(timer);
   }, [wallet.isMiniPay, loggedIn, router]);
 
   const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
@@ -210,27 +198,15 @@ export function LandingPage() {
       return;
     }
     if (wallet.isMiniPay) {
-      setMiniPayBoot('booting');
       void wallet.connect()
         .then(() => router.push('/home'))
         .catch((e: unknown) => {
-          setMiniPayBoot('failed');
           setError(e instanceof Error ? e.message : t.error);
         });
       return;
     }
     setPickerOpen(true);
   };
-
-  if (wallet.isMiniPay && miniPayBoot !== 'failed' && !loggedIn) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {language === 'es' ? 'Abriendo NeonPay…' : 'Opening NeonPay…'}
-        </p>
-      </div>
-    );
-  }
 
   const ctaLabel = wallet.isConnecting ? t.connecting : loggedIn ? t.openApp : t.getStarted;
 

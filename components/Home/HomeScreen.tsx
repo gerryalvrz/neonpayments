@@ -55,19 +55,18 @@ export function HomeScreen() {
     } catch {}
   }, []);
 
-  // /home is logged-in only. Wait briefly for wallet→user sync or in-flight
-  // connect, then always escape to landing so we never stick on "Abriendo…".
+  // /home is logged-in only. Connecting belongs on `/` — do not hold this
+  // screen for isConnecting / isMiniPay (that caused long “Abriendo…” waits).
   useEffect(() => {
     if (user) return;
 
-    const graceMs =
-      wallet.isConnected || wallet.isConnecting || wallet.isMiniPay ? 8000 : 50;
-    const timer = window.setTimeout(() => {
-      router.replace('/');
-    }, graceMs);
+    if (wallet.isConnected) {
+      const timer = window.setTimeout(() => router.replace('/'), 1500);
+      return () => window.clearTimeout(timer);
+    }
 
-    return () => window.clearTimeout(timer);
-  }, [user, wallet.isConnected, wallet.isConnecting, wallet.isMiniPay, router]);
+    router.replace('/');
+  }, [user, wallet.isConnected, router]);
 
   const selectTokenFamily = (next: DashboardTokenFamily) => {
     setTokenFamily(next);
@@ -198,7 +197,7 @@ export function HomeScreen() {
     return (
       <div className="min-h-[40vh] flex items-center justify-center">
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {wallet.isConnected || wallet.isConnecting || wallet.isMiniPay
+          {wallet.isConnected
             ? language === 'es'
               ? 'Abriendo NeonPay…'
               : 'Opening NeonPay…'
