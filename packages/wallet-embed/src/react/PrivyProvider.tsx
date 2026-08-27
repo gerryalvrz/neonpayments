@@ -9,7 +9,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import { getWalletEmbedConfig, type PrivyLoginMethod } from '../config';
 import { PrivyWalletBridge } from './PrivyWalletBridge';
 
-const DEFAULT_LOGIN_METHODS: PrivyLoginMethod[] = ['email', 'sms', 'passkey'];
+const DEFAULT_LOGIN_METHODS: PrivyLoginMethod[] = ['email', 'sms', 'wallet', 'passkey'];
 
 export function PrivyProviderWrapper({ children }: { children: ReactNode }) {
   const { credentials } = getWalletEmbedConfig();
@@ -23,6 +23,15 @@ export function PrivyProviderWrapper({ children }: { children: ReactNode }) {
         loginMethods,
         appearance: {
           theme: 'light',
+          walletChainType: 'ethereum-only',
+          walletList: [
+            'detected_ethereum_wallets',
+            'metamask',
+            'coinbase_wallet',
+            'rainbow',
+            'okx_wallet',
+            'wallet_connect',
+          ],
         },
         embeddedWallets: {
           ethereum: {

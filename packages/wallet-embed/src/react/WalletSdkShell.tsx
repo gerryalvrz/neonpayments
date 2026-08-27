@@ -67,14 +67,6 @@ const WaapProviderWrapper = loadWalletSdk('WaaP', () =>
   import('./WaapProvider').then((m) => ({ default: m.WaapProviderWrapper }))
 );
 
-/** Warm SDK chunks so provider switches do not hit the ready timeout. */
-export function preloadWalletSdk(provider?: StandaloneWalletProviderType) {
-  const loadAll = !provider;
-  if (loadAll || provider === 'privy') void import('./PrivyProvider');
-  if (loadAll || provider === 'thirdweb') void import('./ThirdwebProvider');
-  if (loadAll || provider === 'waap') void import('./WaapProvider');
-}
-
 type BoundaryProps = {
   provider: StandaloneWalletProviderType;
   onChunkError: (provider: StandaloneWalletProviderType) => void;

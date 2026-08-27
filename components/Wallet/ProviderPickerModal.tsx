@@ -1,27 +1,26 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Modal } from '@/components/UI/Modal';
 import { Button } from '@/components/UI/Button';
 import {
   getStandaloneProviders,
   getProviderDisplayName,
 } from '@/utils/wallet/selection';
-import { preloadWalletSdk } from '@celomx/wallet-embed';
 import type { StandaloneWalletProviderType } from '@/utils/wallet/types';
 
 const DESCRIPTIONS: Record<StandaloneWalletProviderType, { en: string; es: string }> = {
   privy: {
-    en: 'Email, SMS, or passkey',
-    es: 'Email, SMS o passkey',
+    en: 'Email, SMS, passkey, or connect your own wallet',
+    es: 'Email, SMS, passkey, o conecta tu propia billetera',
   },
   thirdweb: {
-    en: 'Email, social, or passkey',
-    es: 'Email, redes o passkey',
+    en: 'Email, social, or connect MetaMask / WalletConnect',
+    es: 'Email, redes, o conecta MetaMask / WalletConnect',
   },
   waap: {
-    en: 'Email, social, or biometrics',
-    es: 'Email, redes o biometría',
+    en: 'Email, social, or connect your own wallet',
+    es: 'Email, redes, o conecta tu propia billetera',
   },
 };
 
@@ -44,11 +43,6 @@ export function ProviderPickerModal({
 }: ProviderPickerModalProps) {
   const [pending, setPending] = useState<StandaloneWalletProviderType | null>(null);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!isOpen) return;
-    preloadWalletSdk();
-  }, [isOpen]);
 
   const title = language === 'es' ? 'Elige proveedor de billetera' : 'Choose wallet provider';
   const subtitle =
