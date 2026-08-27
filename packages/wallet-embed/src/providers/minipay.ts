@@ -56,10 +56,10 @@ export class MiniPayProvider implements WalletProvider {
     if (typeof window === 'undefined') return false;
 
     const ethereum = this.getEthereum();
+    // Only real MiniPay — never treat Rabby/MetaMask selectedAddress as MiniPay.
     return !!(
       ethereum?.isMiniPay === true ||
-      (window as Window & { minipay?: unknown }).minipay ||
-      ethereum?.selectedAddress
+      (window as Window & { minipay?: unknown }).minipay
     );
   }
 
@@ -70,16 +70,9 @@ export class MiniPayProvider implements WalletProvider {
     }
 
     try {
-      // Prefer silent accounts when MiniPay already injected a session.
-      let accounts = (await ethereum.request({
-        method: 'eth_accounts',
+      const accounts = (await ethereum.request({
+        method: 'eth_requestAccounts',
       })) as string[];
-
-      if (!accounts?.length) {
-        accounts = (await ethereum.request({
-          method: 'eth_requestAccounts',
-        })) as string[];
-      }
 
       if (!accounts || accounts.length === 0) {
         throw new Error('No accounts found');

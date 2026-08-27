@@ -15,10 +15,9 @@ export function isMiniPayEnvironment(): boolean {
 
   if ((window as Window & { minipay?: unknown }).minipay) return true;
 
+  // Do not use "opera mini" UA alone — that false-positives desktop Opera/Rabby flows.
   const userAgent = navigator.userAgent.toLowerCase();
-  if (userAgent.includes('minipay') || userAgent.includes('opera mini')) {
-    return true;
-  }
+  if (userAgent.includes('minipay')) return true;
 
   return false;
 }
