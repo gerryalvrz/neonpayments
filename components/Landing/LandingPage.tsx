@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Container } from '@/components/Layout/Container';
@@ -166,6 +166,14 @@ export function LandingPage() {
   const t = COPY[language];
   const loggedIn = Boolean(user && wallet.isConnected);
 
+  // MiniPay: keep the marketing page visible while the wallet auto-connects.
+  // Only leave once we actually have a session — never blank the page.
+  useEffect(() => {
+    if (wallet.isMiniPay && loggedIn) {
+      router.replace('/home');
+    }
+  }, [wallet.isMiniPay, loggedIn, router]);
+
   const handleProviderSelect = async (provider: StandaloneWalletProviderType) => {
     setError('');
     try {
@@ -189,7 +197,6 @@ export function LandingPage() {
       router.push('/home');
       return;
     }
-    // Inside MiniPay: use the injected wallet (no provider picker). Go to /home only on tap.
     if (wallet.isMiniPay) {
       void wallet.connect()
         .then(() => router.push('/home'))
