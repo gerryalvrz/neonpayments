@@ -14,7 +14,7 @@ import { Badge } from '@/components/UI/Badge';
 import { Progress } from '@/components/UI/Loading';
 import { Icon, SwapIcon, ArrowDownIcon } from '@/components/Icons';
 import { TEXTILE_FX_SWAP_URL } from '@/config/ripio';
-import { groupedPaymentOptions, MENTO_PAYMENT_SYMBOLS } from '@/config/tokens';
+import { groupedPaymentOptions } from '@/config/tokens';
 import {
   isBelowTextileRfqMinimum,
   isTextileQuoteTooCloseToExpiry,
@@ -23,8 +23,10 @@ import {
   rfqNoQuoteMessage,
   textileCounterpart,
   TEXTILE_CELO_CHAIN_ID,
+  TEXTILE_SWAP_SYMBOLS,
   TEXTILE_TOKEN_ADDRESSES,
   toAtomicAmount,
+  type TextileSwapSymbol,
   type TextileUnsignedTx,
 } from '@/utils/textile/fx';
 import { ensureTextileAllowance, sendTextileTx } from '@/utils/textile/execute';
@@ -35,9 +37,12 @@ import { celoscanTxUrl } from '@/utils/explorer';
 import type { SwapRoute } from '@/types';
 
 type Step = 'input' | 'review' | 'processing' | 'success';
+type Pool = 'ripio' | 'mento';
 
-const SWAP_TOKENS = [...MENTO_PAYMENT_SYMBOLS, 'USDT', 'wBRL', 'wARS'] as const;
-type Token = (typeof SWAP_TOKENS)[number];
+// Only tokens that actually swap today. Ripio LATAM legs + the USDT counter-leg
+// are the sole live corridors (Textile FX RFQ). Mento swaps are not wired yet.
+const RIPIO_SWAP_TOKENS = TEXTILE_SWAP_SYMBOLS;
+type Token = TextileSwapSymbol;
 
 type QuotePreview = {
   live: boolean;
@@ -63,6 +68,7 @@ export function SwapScreen() {
   const { walletBalance, language, wallet } = useApp();
   const { showToast } = useToast();
   const [step, setStep] = useState<Step>('input');
+  const [pool, setPool] = useState<Pool>('ripio');
   const [fromToken, setFromToken] = useState<Token>('USDT');
   const [toToken, setToToken] = useState<Token>('wBRL');
   const [fromAmount, setFromAmount] = useState('');
@@ -78,7 +84,13 @@ export function SwapScreen() {
   const labels = {
     en: {
       title: 'Swap Tokens',
-      subtitle: 'Textile FX is live for Ripio wARS / wBRL ↔ USDT. Mento pairs are listed separately and not available yet.',
+      subtitle: 'Ripio LATAM stables (wARS / wBRL) ↔ USDT are live via Textile FX. More pools are coming.',
+      poolRipio: 'Ripio · LATAM',
+      poolMento: 'Mento',
+      soon: 'Soon',
+      mentoSoonTitle: 'Mento swaps are coming soon',
+      mentoSoonBody:
+        'You can already hold Mento stables in your wallet. In-app Mento swaps are not live yet — for now, swap Ripio LATAM pairs against USDT.',
       from: 'From',
       to: 'To',
       amount: 'Amount',
@@ -88,6 +100,7 @@ export function SwapScreen() {
       estimatedTime: 'Estimated Time',
       review: 'Review Swap',
       confirm: 'Confirm Swap',
+      gettingQuote: 'Getting best quote…',
       processing: 'Processing swap...',
       success: 'Swap Completed!',
       continue: 'Continue',
@@ -102,7 +115,13 @@ export function SwapScreen() {
     },
     es: {
       title: 'Intercambiar Tokens',
-      subtitle: 'Textile FX está activo para Ripio wARS / wBRL ↔ USDT. Los pares Mento están listados aparte y aún no están disponibles.',
+      subtitle: 'Los stables LATAM de Ripio (wARS / wBRL) ↔ USDT están activos con Textile FX. Pronto más pools.',
+      poolRipio: 'Ripio · LATAM',
+      poolMento: 'Mento',
+      soon: 'Pronto',
+      mentoSoonTitle: 'Los swaps de Mento llegan pronto',
+      mentoSoonBody:
+        'Ya puedes guardar stables de Mento en tu billetera. Los swaps de Mento dentro de la app aún no están activos — por ahora, intercambia pares LATAM de Ripio contra USDT.',
       from: 'De',
       to: 'A',
       amount: 'Cantidad',
@@ -112,6 +131,7 @@ export function SwapScreen() {
       estimatedTime: 'Tiempo Estimado',
       review: 'Revisar Intercambio',
       confirm: 'Confirmar Intercambio',
+      gettingQuote: 'Buscando la mejor cotización…',
       processing: 'Procesando intercambio...',
       success: '¡Intercambio Completado!',
       continue: 'Continuar',
@@ -129,7 +149,7 @@ export function SwapScreen() {
   const t = labels[language];
   const textilePair = resolveTextilePair(fromToken, toToken);
 
-  const tokenOptions = groupedPaymentOptions(language, SWAP_TOKENS);
+  const tokenOptions = groupedPaymentOptions(language, RIPIO_SWAP_TOKENS);
 
   const selectFromToken = (next: Token) => {
     setFromToken(next);
@@ -552,6 +572,41 @@ export function SwapScreen() {
 
           {step === 'input' && (
             <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
+                <button
+                  type="button"
+                  onClick={() => setPool('ripio')}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                    pool === 'ripio'
+                      ? 'bg-acid-lemon text-gray-900'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {t.poolRipio}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPool('mento')}
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                    pool === 'mento'
+                      ? 'bg-acid-lemon text-gray-900'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {t.poolMento}
+                  <span className="rounded-full bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                    {t.soon}
+                  </span>
+                </button>
+              </div>
+
+              {pool === 'mento' ? (
+                <div className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 p-6 text-center space-y-2">
+                  <p className="font-semibold text-gray-900 dark:text-white">{t.mentoSoonTitle}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{t.mentoSoonBody}</p>
+                </div>
+              ) : (
+                <>
               {textilePair && (
                 <Badge variant="info" size="sm">{t.venue}</Badge>
               )}
@@ -613,9 +668,27 @@ export function SwapScreen() {
                     className="bg-gray-50"
                   />
                 </div>
-                {preview?.hint && (
+                {quoting ? (
+                  <p className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <svg
+                      className="animate-spin h-3.5 w-3.5 shrink-0 text-acid-lemon-dark dark:text-acid-lemon"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    {t.gettingQuote}
+                  </p>
+                ) : preview?.hint ? (
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{preview.hint}</p>
-                )}
+                ) : null}
               </div>
 
               <Button
@@ -636,6 +709,8 @@ export function SwapScreen() {
                 >
                   {t.external}
                 </Button>
+              )}
+                </>
               )}
             </div>
           )}

@@ -479,4 +479,35 @@ h1, h2, h3, h4, h5, h6 {
   transition-duration: 200ms;
 }
 
+/*
+ * human.tech / Silk (WaaP) signing sheet fix.
+ * The WaaP SDK injects a fixed, full-screen modal container and centers a
+ * fixed-size iframe wrapper inside it. When the confirmation content is taller
+ * than the wrapper (e.g. the "Unknown EVM calldata selector" warning on Textile
+ * swaps), or a stale resize message shrinks it, the Sign button gets clipped and
+ * the container never scrolls. The wrapper sizes are inline styles, so only
+ * !important can override them. Keep the sheet scrollable and fully reachable.
+ */
+#waap-wallet-iframe-container,
+#silk-wallet-iframe-container {
+  align-items: flex-start !important;
+  overflow-y: auto !important;
+  padding: 24px 0 !important;
+}
+
+#waap-wallet-iframe-wrapper,
+#silk-wallet-iframe-wrapper {
+  height: min(600px, calc(100dvh - 48px)) !important;
+  max-height: calc(100dvh - 48px) !important;
+  width: min(380px, calc(100vw - 32px)) !important;
+  margin: 0 auto !important;
+  flex: 0 0 auto !important;
+}
+
+#waap-wallet-iframe,
+#silk-wallet-iframe {
+  height: 100% !important;
+  width: 100% !important;
+}
+
 
