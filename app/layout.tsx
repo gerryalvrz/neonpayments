@@ -38,9 +38,9 @@ const CardNavWrapper = dynamic(() => import('@/components/CardNav/CardNavWrapper
 });
 
 export const metadata: Metadata = {
-  title: 'NeonPay — Send digital dollars in Mexico',
+  title: 'NeonPay — LATAM stablecoins. One wallet.',
   description:
-    'NeonPay is a payments app for Mexico and Latin America. Send, receive, and convert USDC, USDT, and USDm on Celo.',
+    'NeonPay is a stablecoin wallet and payments app built on Celo. Hold Ripio and Mento stables, send and receive, and swap available pairs — on the web or inside MiniPay.',
   metadataBase: new URL('https://neonpay.celo.mx'),
 };
 

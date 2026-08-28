@@ -181,14 +181,6 @@ export function SwapScreen() {
 
       setQuoting(true);
       try {
-        let data: {
-          status?: string
-          buyAmount?: string
-          hint?: string
-          reason?: string
-          error?: string
-        } = {}
-        let ok = false
         for (let attempt = 0; attempt < 3; attempt += 1) {
           const response = await fetch('/api/textile/quote', {
             method: 'POST',
@@ -201,32 +193,35 @@ export function SwapScreen() {
               language,
             }),
           });
-          data = await response.json();
-          ok = response.ok;
+          const data: {
+            status?: string
+            buyAmount?: string
+            hint?: string
+            reason?: string
+            error?: string
+          } = await response.json();
           if (cancelled) return;
-          if (ok && data.status !== 'no_quote' && data.buyAmount) break;
-          if (attempt < 2) {
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+
+          if (response.ok && data.status !== 'no_quote' && data.buyAmount) {
+            setToAmount(String(data.buyAmount));
+            setPreview({ live: true, buyAmount: String(data.buyAmount), hint: data.hint });
+            return;
           }
-        }
-        if (cancelled) return;
-        if (!ok) {
-          setToAmount('');
-          setPreview({ live: false, buyAmount: '', hint: data.error || t.minSize });
-          return;
-        }
-        if (data.status === 'no_quote' || !data.buyAmount) {
+
           setToAmount('');
           setPreview({
             live: false,
             buyAmount: '',
             reason: data.reason,
-            hint: data.hint || rfqNoQuoteMessage(data.reason, language, pair.wfiat),
+            hint: !response.ok
+              ? data.error || t.minSize
+              : data.hint || rfqNoQuoteMessage(data.reason, language, pair.wfiat),
           });
-          return;
+
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+          }
         }
-        setToAmount(String(data.buyAmount));
-        setPreview({ live: true, buyAmount: String(data.buyAmount), hint: data.hint });
       } catch {
         if (!cancelled) {
           setToAmount('');
@@ -532,13 +527,19 @@ export function SwapScreen() {
   };
 
   const fromBalance = walletBalance[fromToken] || 0;
+  const hasQuoteableAmount =
+    Boolean(fromAmount) &&
+    parseFloat(fromAmount) > 0 &&
+    Boolean(textilePair) &&
+    !isBelowTextileRfqMinimum(fromAmount);
   const continueDisabled =
     !fromAmount ||
     parseFloat(fromAmount) <= 0 ||
     parseFloat(fromAmount) > fromBalance ||
     quoting ||
     !textilePair ||
-    isBelowTextileRfqMinimum(fromAmount);
+    isBelowTextileRfqMinimum(fromAmount) ||
+    (hasQuoteableAmount && !preview?.live);
 
   return (
     <Container>
@@ -606,7 +607,7 @@ export function SwapScreen() {
                 <div className="mt-2">
                   <Input
                     type="text"
-                    value={quoting ? '…' : toAmount}
+                    value={quoting && !preview ? '…' : toAmount}
                     readOnly
                     placeholder="0.00"
                     className="bg-gray-50"
