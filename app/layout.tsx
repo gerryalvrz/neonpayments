@@ -37,11 +37,24 @@ const CardNavWrapper = dynamic(() => import('@/components/CardNav/CardNavWrapper
   ssr: false,
 });
 
+const APP_ICON = '/logos/icon-neonpay.png';
+
 export const metadata: Metadata = {
   title: 'NeonPay — LATAM stablecoins. One wallet.',
   description:
     'NeonPay is a stablecoin wallet and payments app built on Celo. Hold Ripio and Mento stables, send and receive, and swap available pairs — on the web or inside MiniPay.',
   metadataBase: new URL('https://neonpay.celo.mx'),
+  applicationName: 'NeonPay',
+  icons: {
+    icon: [{ url: APP_ICON, type: 'image/png', sizes: '200x200' }],
+    shortcut: [{ url: APP_ICON, type: 'image/png' }],
+    apple: [{ url: APP_ICON, type: 'image/png', sizes: '200x200' }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'NeonPay',
+    statusBarStyle: 'default',
+  },
 };
 
 export default function RootLayout({
