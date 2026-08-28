@@ -177,57 +177,56 @@ export function TransactionHistoryScreen() {
                 variant="interactive"
                 padding="md"
                 onClick={() => setSelectedTransaction(transaction)}
-                className="cursor-pointer group"
+                className="cursor-pointer group !p-4 sm:!p-5"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className={`p-3 rounded-xl flex-shrink-0 ${
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 items-start">
+                  <div className={`p-2.5 sm:p-3 rounded-xl ${
                       transaction.type === 'send' ? 'bg-red-50' :
                       transaction.type === 'receive' ? 'bg-green-50' :
                       'bg-blue-50'
                     } group-hover:scale-110 transition-transform duration-200`}>
-                      <Icon
-                        color={
-                          transaction.type === 'send' ? 'error' :
-                          transaction.type === 'receive' ? 'success' :
-                          'info'
-                        }
-                        size="md"
-                      >
-                        {getTransactionIcon(transaction.type)}
-                      </Icon>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <h3 className="font-bold text-gray-900 dark:text-white capitalize">
-                          {t[transaction.type]}
-                        </h3>
-                        {getStatusBadge(transaction.status)}
-                      </div>
-                      <p className="text-sm font-medium text-gray-500">
-                        {formatDate(transaction.timestamp)}
-                      </p>
-                      {transaction.description && (
-                        <p className="text-sm text-gray-500 mt-1 truncate">
-                          {transaction.description}
-                        </p>
-                      )}
-                    </div>
+                    <Icon
+                      color={
+                        transaction.type === 'send' ? 'error' :
+                        transaction.type === 'receive' ? 'success' :
+                        'info'
+                      }
+                      size="md"
+                    >
+                      {getTransactionIcon(transaction.type)}
+                    </Icon>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-4">
-                    <div className={`font-bold text-base financial-number mb-1 ${
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 dark:text-white capitalize truncate">
+                      {t[transaction.type]}
+                    </p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-500 mt-0.5">
+                      {formatDate(transaction.timestamp)}
+                    </p>
+                    {transaction.description && (
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">
+                        {transaction.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0 pl-1">
+                    <div className={`font-bold text-sm sm:text-base financial-number whitespace-nowrap ${
                       transaction.type === 'receive' ? 'text-semantic-success' :
                       transaction.type === 'send' ? 'text-semantic-error' :
                       'text-gray-900 dark:text-white'
                     }`}>
                       {transaction.type === 'receive' ? '+' : transaction.type === 'send' ? '-' : ''}
-                      {transaction.toAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs font-medium text-gray-500">{transaction.toToken}</span>
+                      {transaction.toAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}
+                      <span className="text-xs font-medium text-gray-500">{transaction.toToken}</span>
                     </div>
                     {transaction.fromToken !== transaction.toToken && (
-                      <div className="text-xs font-medium text-gray-500 mt-1">
+                      <div className="text-xs font-medium text-gray-500 mt-1 whitespace-nowrap">
                         {transaction.fromAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {transaction.fromToken}
                       </div>
                     )}
+                    <div className="mt-1.5 flex justify-end">
+                      {getStatusBadge(transaction.status)}
+                    </div>
                   </div>
                 </div>
               </Card>
