@@ -23,6 +23,7 @@ import {
   rfqNoQuoteMessage,
   textileCounterpart,
   TEXTILE_CELO_CHAIN_ID,
+  TEXTILE_DEFAULT_WFIAT,
   TEXTILE_SWAP_SYMBOLS,
   TEXTILE_TOKEN_ADDRESSES,
   toAtomicAmount,
@@ -69,8 +70,8 @@ export function SwapScreen() {
   const { showToast } = useToast();
   const [step, setStep] = useState<Step>('input');
   const [pool, setPool] = useState<Pool>('ripio');
-  const [fromToken, setFromToken] = useState<Token>('USDT');
-  const [toToken, setToToken] = useState<Token>('wBRL');
+  const [fromToken, setFromToken] = useState<Token>(TEXTILE_DEFAULT_WFIAT);
+  const [toToken, setToToken] = useState<Token>('USDT');
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [quote, setQuote] = useState<SwapRoute | null>(null);
@@ -84,7 +85,7 @@ export function SwapScreen() {
   const labels = {
     en: {
       title: 'Swap Tokens',
-      subtitle: 'Ripio LATAM stables (wARS / wBRL) ↔ USDT are live via Textile FX. More pools are coming.',
+      subtitle: 'Ripio LATAM stables (wMXN / wARS / wBRL) ↔ USDT are live via Textile FX.',
       poolRipio: 'Ripio · LATAM',
       poolMento: 'Mento',
       soon: 'Soon',
@@ -115,7 +116,7 @@ export function SwapScreen() {
     },
     es: {
       title: 'Intercambiar Tokens',
-      subtitle: 'Los stables LATAM de Ripio (wARS / wBRL) ↔ USDT están activos con Textile FX. Pronto más pools.',
+      subtitle: 'Los stables LATAM de Ripio (wMXN / wARS / wBRL) ↔ USDT están activos con Textile FX.',
       poolRipio: 'Ripio · LATAM',
       poolMento: 'Mento',
       soon: 'Pronto',

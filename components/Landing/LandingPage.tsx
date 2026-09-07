@@ -61,7 +61,7 @@ const COPY = {
       {
         n: '3',
         title: 'Swap when you need to',
-        body: 'Trade available Ripio and Mento pairs, including wARS and wBRL today. wMXN coming next.',
+        body: 'Trade available Ripio and Mento pairs, including wMXN, wARS and wBRL today.',
       },
     ],
     liveTitle: 'What you can do',
@@ -122,7 +122,7 @@ const COPY = {
       {
         n: '3',
         title: 'Cambia cuando lo necesites',
-        body: 'Cambia pares de Ripio y Mento disponibles, incluidos wARS y wBRL hoy. wMXN viene después.',
+        body: 'Cambia pares de Ripio y Mento disponibles, incluidos wMXN, wARS y wBRL hoy.',
       },
     ],
     liveTitle: 'Qué puedes hacer',

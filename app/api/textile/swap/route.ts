@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const pair = resolveTextilePair(sellSymbol, buySymbol)
     if (!pair) {
       return NextResponse.json(
-        { error: 'Unsupported pair. Use wARS or wBRL against USDT on Celo.' },
+        { error: 'Unsupported pair. Use wMXN, wARS, or wBRL against USDT on Celo.' },
         { status: 400 }
       )
     }

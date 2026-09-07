@@ -13,17 +13,21 @@ export const TEXTILE_RFQ_MIN_WHOLE_TOKENS = 1
 export const TEXTILE_RFQ_EXECUTE_BUFFER_MS = 8_000
 export const TEXTILE_LIMIT_ORDER_REACTOR = '0xa9AA0a64769cBed4d3B1Ceb4Df01CdE915C235b3'
 
-export const TEXTILE_SWAP_SYMBOLS = ['wARS', 'wBRL', 'USDT'] as const
+export const TEXTILE_WFIAT_LEGS = ['wMXN', 'wARS', 'wBRL'] as const
+export type TextileWfiatLeg = (typeof TEXTILE_WFIAT_LEGS)[number]
+export const TEXTILE_DEFAULT_WFIAT: TextileWfiatLeg = 'wMXN'
+export const TEXTILE_SWAP_SYMBOLS = [...TEXTILE_WFIAT_LEGS, 'USDT'] as const
 export type TextileSwapSymbol = (typeof TEXTILE_SWAP_SYMBOLS)[number]
-export type TextileWfiatLeg = 'wARS' | 'wBRL'
 
 export const TEXTILE_TOKEN_DECIMALS: Record<TextileSwapSymbol, number> = {
+  wMXN: 18,
   wARS: 18,
   wBRL: 18,
   USDT: 6,
 }
 
 export const TEXTILE_TOKEN_ADDRESSES: Record<TextileSwapSymbol, string> = {
+  wMXN: RIPIO_WFIAT_TOKENS.wMXN,
   wARS: RIPIO_WFIAT_TOKENS.wARS,
   wBRL: RIPIO_WFIAT_TOKENS.wBRL,
   USDT: CELO_USDT,
@@ -41,7 +45,7 @@ export function isTextileSwapSymbol(value: string): value is TextileSwapSymbol {
 }
 
 export function isTextileWfiatLeg(value: string): value is TextileWfiatLeg {
-  return value === 'wARS' || value === 'wBRL'
+  return (TEXTILE_WFIAT_LEGS as readonly string[]).includes(value)
 }
 
 export function textileCounterpart(
@@ -49,7 +53,7 @@ export function textileCounterpart(
   other: string
 ): TextileSwapSymbol {
   if (selected === 'USDT') {
-    return isTextileWfiatLeg(other) ? other : 'wBRL'
+    return isTextileWfiatLeg(other) ? other : TEXTILE_DEFAULT_WFIAT
   }
   return 'USDT'
 }
@@ -93,9 +97,13 @@ export function rfqNoQuoteMessage(
   wfiat?: TextileWfiatLeg | string | null
 ): string {
   const thinWars = wfiat === 'wARS'
+  const thinWmxn = wfiat === 'wMXN'
   if (language === 'es') {
     switch (reason) {
       case 'no_makers_online':
+        if (thinWmxn) {
+          return 'Textile aún está armando el libro de wMXN. Confirma de nuevo o vende wMXN por USDT.'
+        }
         return thinWars
           ? 'Textile aún está armando liquidez en wARS. Confirma de nuevo o usa wBRL.'
           : 'Ningún maker cotizó en este segundo. Confirma de nuevo.'
@@ -107,6 +115,9 @@ export function rfqNoQuoteMessage(
   }
   switch (reason) {
     case 'no_makers_online':
+      if (thinWmxn) {
+        return 'Textile is still filling the wMXN book. Confirm again or sell wMXN for USDT.'
+      }
       return thinWars
         ? 'Textile is still onboarding liquidity on wARS. Confirm again or use wBRL.'
         : 'No maker quoted this second. Confirm again.'

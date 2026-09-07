@@ -18,7 +18,11 @@ export type RipioWfiatSymbol = keyof typeof RIPIO_WFIAT_TOKENS
 
 export const RIPIO_WFIAT_DECIMALS = 18
 export const TEXTILE_FX_SWAP_URL = 'https://app.textilecredit.com/s/swap'
-export const TEXTILE_FX_CORRIDORS: ReadonlySet<RipioWfiatSymbol> = new Set(['wARS', 'wBRL'])
+export const TEXTILE_FX_CORRIDORS: ReadonlySet<RipioWfiatSymbol> = new Set([
+  'wMXN',
+  'wARS',
+  'wBRL',
+])
 
 export const RIPIO_WFIAT_CATALOG: readonly {
   symbol: RipioWfiatSymbol

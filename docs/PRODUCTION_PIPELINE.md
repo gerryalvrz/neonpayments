@@ -11,6 +11,8 @@ Do **not** copy Mento COPm as the product output, agent contracts, or the partne
 
 Related: [COP By repo](https://github.com/Cop-BY/cop_by) · comparison canvases are in the Cursor project, not this repo.
 
+**Agent envelope (hackathon):** [SDD.md](./SDD.md) — capped 8004 agent spend + revoke. Separate slices `S0`–`S8`. Does not replace P0 send/swap.
+
 ---
 
 ## 1. What we copy vs skip
@@ -64,18 +66,18 @@ Broken for production:
 Production path is **only**:
 
 1. Connect wallet (MiniPay auto-connect; standalone picker).
-2. Swap a **live Textile pair** (`wARS`/`wBRL` ↔ `USDT`).
+2. Swap a **live Textile pair** (`wMXN`/`wARS`/`wBRL` ↔ `USDT`).
 3. Send a listed payment token to an address / CNS / QR.
 
 Hide or hard-disable on the critical path (do not mock-complete):
 
-- Indicative / mocked Squid swaps (USDC/cUSD/USDT among themselves, wMXN, etc.) until **P6** ships a real route
+- Indicative / mocked Squid swaps (USDC/cUSD/USDT among themselves, etc.) until **P6** ships a real route
 - Transak card top-up
 - Mexico bill-pay / services
 - x402
 - Mercado Pago **credit** (OAuth connect may stay; funding must not fake USDC)
 
-**Open product decision (block P4 and wMXN-on-Squid, not P1):** Textile has no wMXN corridor today. Mento has no MXN token (cMXP was a proposal). v1 converter is ARS/BRL ↔ USDT, or USDC send with MXN as display FX. Do not persist “buy wMXN” until Textile opens that pair **or** Squid returns a live Uniswap route to `wMXN` (prove with a quote, then allow the pair).
+**Textile wMXN:** RFQ preview on Celo `42220` quotes `wMXN` → `USDT` (Ripio `0x337E7456B420bD3481e7FA61fA9850343d610d34`). Enable it on the Textile desk. `USDT` → `wMXN` may still return `no_makers_online` while that book fills — show the existing RFQ miss copy, do not mock a fill. Mento still has no MXN token. Squid `wMXN` stays blocked until a production Uniswap quote succeeds.
 
 Copy COP By’s UX rule: one job, few taps, pesos/MXN-first copy in MiniPay, Spanish default when `wallet.isMiniPay`.
 
@@ -363,7 +365,7 @@ When implementing, touch these first:
 
 ## 12. Explicitly out of scope
 
-- Replacing Textile with Squid. Both venues share the intent ledger; Textile keeps wARS/wBRL ↔ USDT.
+- Replacing Textile with Squid. Both venues share the intent ledger; Textile keeps wMXN/wARS/wBRL ↔ USDT.
 - Shipping Squid before P2 (no mock Squid “success”).
 - Defaulting Squid output to Mento COPm (Colombia product, not ours).
 - Ordered multi-token spend in the first Squid PR (that is P6b).
